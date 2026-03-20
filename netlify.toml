@@ -1,0 +1,9 @@
+[build]
+  base      = "acminder"
+  command   = "npm run build"
+  publish   = "acminder/dist"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
