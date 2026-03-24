@@ -70,7 +70,7 @@ export default function Login() {
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-end">
             <span className="text-sm font-medium text-textPrimary">Password</span>
-            <button type="button" className="text-sm text-primary font-medium hover:underline">
+            <button type="button" onClick={() => navigate('/forgot-password')} className="text-sm text-primary font-medium hover:underline">
               Forgot password?
             </button>
           </div>

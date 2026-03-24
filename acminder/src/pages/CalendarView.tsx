@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import MiniCalendar from '../components/MiniCalendar';
 import ScheduleItemCard from '../components/ScheduleItemCard';
 import { AppContext } from '../context/AppContext';
+import { itemOccursOnDate } from '../lib/conflictEngine';
 
 export default function CalendarView() {
   const navigate = useNavigate();
@@ -25,10 +26,7 @@ export default function CalendarView() {
 
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
   const todaysItems = (items || [])
-    .filter(i => {
-      const itemDate = i.type === 'assignment' ? (i.due_date || i.date) : i.date;
-      return itemDate === selectedDateStr;
-    })
+    .filter(i => itemOccursOnDate(i, selectedDateStr))
     .sort((a, b) => {
       const timeA = a.type === 'assignment' ? (a.due_time || a.start_time || '') : a.start_time;
       const timeB = b.type === 'assignment' ? (b.due_time || b.start_time || '') : b.start_time;

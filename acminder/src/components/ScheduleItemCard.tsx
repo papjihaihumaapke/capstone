@@ -3,20 +3,35 @@ import type { ScheduleItem } from '../types';
 
 function formatTime12(timeStr: string | undefined) {
   if (!timeStr) return '';
-  // Strip seconds if present (HH:MM:SS → HH:MM)
   const t = timeStr.trim().replace(/^(\d{1,2}:\d{2}):\d{2}$/, '$1');
-  // If it's already in 12-hour format, just return it.
   if (/[AaPp][Mm]$/.test(t)) return t;
-
   const match = t.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return t;
   const h24 = Number(match[1]);
   const mins = match[2];
   if (Number.isNaN(h24)) return t;
-
   const ampm = h24 >= 12 ? 'PM' : 'AM';
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   return `${h12}:${mins} ${ampm}`;
+}
+
+function formatDueDate(dateStr: string | undefined) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getItemSubtitle(item: any) {
+  if (item.type === 'shift') {
+    return [item.role, item.location].filter(Boolean).join(' • ');
+  }
+  if (item.type === 'class') {
+    return [item.course, item.location].filter(Boolean).join(' • ');
+  }
+  if (item.type === 'assignment') {
+    return item.course || '';
+  }
+  return item.location || '';
 }
 
 interface Props {
@@ -52,11 +67,13 @@ export default function ScheduleItemCard({ item, conflictSeverity = 'none', onCl
           </p>
         ) : (
           <p className="font-body text-sm text-textSecondary truncate">
-            Due: {(item as any).due_date} {formatTime12((item as any).due_time)}
+            Due: {formatDueDate((item as any).due_date)} {formatTime12((item as any).due_time)}
           </p>
         )}
-        {(item as any).location && (
-          <p className="font-body text-xs text-gray-400 truncate mt-1">{(item as any).location}</p>
+        {getItemSubtitle(item) && (
+          <p className="font-body text-xs text-gray-400 truncate mt-1">
+            {getItemSubtitle(item)}
+          </p>
         )}
       </div>
 
@@ -82,7 +99,12 @@ export default function ScheduleItemCard({ item, conflictSeverity = 'none', onCl
               <CheckCircle2 size={20} />
             </button>
           )}
-          <button className="p-2 -mr-2 text-gray-300 hover:text-primary transition-colors">
+          {/* Pencil calls the same action as tapping the card (navigate to edit) */}
+          <button
+            className="p-2 -mr-2 text-gray-300 hover:text-primary transition-colors"
+            onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+            aria-label="Edit"
+          >
             <Pencil size={18} />
           </button>
         </div>

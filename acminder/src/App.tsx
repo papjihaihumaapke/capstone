@@ -6,6 +6,7 @@ import Splash from './pages/Splash';
 import Onboarding from './pages/Onboarding';
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
 import VerifyEmail from './pages/VerifyEmail';
 import ImportSchedule from './pages/ImportSchedule';
 import Home from './pages/Home';
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Protected routes */}

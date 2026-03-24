@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 
 export default function BottomNav({ className = '' }: { className?: string }) {
   const location = useLocation();
-  const { user } = useAppContext();
+  const { user, conflictCount } = useAppContext();
   const currentPath = location.pathname;
   if (!user) return null;
 
@@ -19,6 +19,7 @@ export default function BottomNav({ className = '' }: { className?: string }) {
       {TABS.map((tab) => {
         const isActive = currentPath === tab.path;
         const Icon = tab.icon;
+        const showBadge = tab.name === 'Home' && conflictCount > 0;
         return (
           <Link
             key={tab.name}
@@ -27,7 +28,14 @@ export default function BottomNav({ className = '' }: { className?: string }) {
               isActive ? 'text-[#F07B5A]' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
-            <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+            <div className="relative">
+              <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+              {showBadge && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-[3px]">
+                  {conflictCount > 9 ? '9+' : conflictCount}
+                </span>
+              )}
+            </div>
             <span className={`text-[10px] font-body ${isActive ? 'font-semibold' : 'font-medium'}`}>
               {tab.name}
             </span>

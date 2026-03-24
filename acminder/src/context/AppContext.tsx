@@ -4,6 +4,20 @@ import { supabase } from '../lib/supabase';
 import { getItems, addItem as addItemApi, updateItem as updateItemApi, deleteItem as deleteItemApi } from '../lib/supabase';
 import { calculateConflicts } from '../lib/conflictEngine';
 
+const RESOLVED_KEY = 'acminder_resolved_conflicts';
+
+function loadResolvedIds(): Set<string> {
+  try {
+    const stored = localStorage.getItem(RESOLVED_KEY);
+    if (stored) return new Set(JSON.parse(stored));
+  } catch (e) { /* ignore */ }
+  return new Set();
+}
+
+function saveResolvedIds(ids: Set<string>) {
+  localStorage.setItem(RESOLVED_KEY, JSON.stringify([...ids]));
+}
+
 interface AppContextType {
   user: User | null;
   items: ScheduleItem[];
@@ -50,17 +64,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Removed redundant detectConflicts() calls from addItem/updateItem/deleteItem.
+  // The useEffect([items]) below handles recalculation whenever items change.
   const addItem = async (item: Omit<ScheduleItem, 'id' | 'created_at'>) => {
     const newItem = await addItemApi(item);
     setItems((prev) => [...prev, newItem]);
-    detectConflicts();
   };
 
   const updateItem = async (id: string, updates: Partial<ScheduleItem>) => {
     try {
       await updateItemApi(id, updates);
       await fetchItems();
-      detectConflicts();
     } catch (error) {
       console.error('Failed to update item:', error);
     }
@@ -70,27 +84,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await deleteItemApi(id);
       await fetchItems();
-      detectConflicts();
     } catch (error) {
       console.error('Failed to delete item:', error);
     }
   };
 
   const detectConflicts = () => {
-    const newConflicts = calculateConflicts(items);
+    // Reads items from the current closure — safe when called from useEffect([items])
+    // or from places where items is already up-to-date.
+    const resolvedIds = loadResolvedIds();
+    const newConflicts = calculateConflicts(items).map((c) => ({
+      ...c,
+      resolved: resolvedIds.has(c.id),
+    }));
     setConflicts(newConflicts);
   };
 
   const updateConflict = (id: string, updates: Partial<Conflict>) => {
-    setConflicts(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    setConflicts((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
   };
 
   const resolveConflict = (id: string) => {
+    // Persist to localStorage so resolved state survives page refresh
+    const resolvedIds = loadResolvedIds();
+    resolvedIds.add(id);
+    saveResolvedIds(resolvedIds);
     updateConflict(id, { resolved: true });
   };
 
   const showToast = (message: string) => setToast({ message, visible: true });
   const hideToast = () => setToast(null);
+
   const logout = () => {
     setUser(null);
     setItems([]);
@@ -98,6 +122,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLoading(false);
   };
 
+  // Recalculate conflicts whenever items change (with persisted resolved state applied)
   useEffect(() => {
     detectConflicts();
   }, [items]);
@@ -132,10 +157,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider
-      value={{ 
-        user, items, conflicts, loading, 
+      value={{
+        user, items, conflicts, loading,
         fetchItems, addItem, updateItem, deleteItem, detectConflicts, updateConflict, resolveConflict,
-        conflictCount: conflicts.filter(c => !c.resolved).length,
+        conflictCount: conflicts.filter((c) => !c.resolved).length,
         toast, showToast, hideToast,
         importedSources, setImportedSources,
         logout,

@@ -14,13 +14,6 @@ export type GeminiConflictResult = {
   suggestions: TimingSuggestion[];
 };
 
-function extractJson(text: string): string | null {
-  const first = text.indexOf('{');
-  const last = text.lastIndexOf('}');
-  if (first === -1 || last === -1 || last <= first) return null;
-  return text.slice(first, last + 1);
-}
-
 function extractJsonBalanced(text: string): string | null {
   const first = text.indexOf('{');
   if (first === -1) return null;
@@ -128,8 +121,9 @@ export async function generateConflictWithGemini(input: {
     move_item_type: ScheduleItem['type'];
     alternative_times: Array<{ start_time: string; end_time: string }>;
   }>;
+  additional_conflicts?: ScheduleItem[];
 }): Promise<GeminiConflictResult> {
-  const { apiKey, item_a, item_b, conflict_date, overlap_window, close_alternatives } = input;
+  const { apiKey, item_a, item_b, conflict_date, overlap_window, close_alternatives, additional_conflicts = [] } = input;
 
   const prompt = `
 You are a scheduling assistant helping a student manage conflicts between work shifts, university classes, and assignments.
@@ -138,9 +132,12 @@ Conflict date: ${conflict_date}
 Overlap window: ${overlap_window.start_time} - ${overlap_window.end_time}
 Item A: ${item_a.type} "${item_a.title}" (date: ${(item_a as any).date ?? (item_a as any).due_date ?? ''}, time: ${(item_a as any).start_time ?? (item_a as any).due_time ?? ''} - ${(item_a as any).end_time ?? ''})
 Item B: ${item_b.type} "${item_b.title}" (date: ${(item_b as any).date ?? (item_b as any).due_date ?? ''}, time: ${(item_b as any).start_time ?? (item_b as any).due_time ?? ''} - ${(item_b as any).end_time ?? ''})
+${additional_conflicts.length > 0 ? `WARNING: The following additional items ALSO overlap with this block:
+${additional_conflicts.map(c => `- ${c.type} "${c.title}" (${(c as any).start_time ?? (c as any).due_time ?? ''} - ${(c as any).end_time ?? ''})`).join('\n')}` : ''}
 
-Close alternatives (JSON). Pick ONLY from these alternatives:
-${JSON.stringify(close_alternatives)}
+${close_alternatives.length > 0 
+  ? `Available alternative time slots (JSON). You may select from these if you recommend rescheduling:\n${JSON.stringify(close_alternatives)}` 
+  : `There are no free alternative time slots available on this day.`}
 
 Return ONLY this JSON (no markdown):
 {
@@ -159,10 +156,9 @@ Return ONLY this JSON (no markdown):
 Rules:
 - summary: 1-2 sentences explaining the conflict in plain English.
 - Provide exactly 2 suggestions.
-- CRITICAL: Provide ONLY logical, practical solutions (qualitative advice) on how to manage the conflict. DO NOT suggest mathematically moving items to different time slots.
-- For instance, suggest "Talk to your manager to leave 15 mins early", "Eat lunch during transit", etc.
-- If the conflict involves an assignment, ALWAYS suggest completing and submitting the assignment beforehand as one of your logical solutions.
-- For all suggestions, you MUST omit move_item_id, proposed_start_time, and proposed_end_time. Provide your entire advice in the "reason" field.
+- If there ARE alternative time slots provided above, your first suggestion should optionally utilize one (fill in move_item_id, proposed_start_time, etc.).
+- If there are NO alternative time slots, or for your second suggestion, provide qualitative/creative advice in the "reason" field (e.g. "Ask to leave 15 mins early", "Email professor") and omit time fields.
+- If the conflict involves an assignment, ALWAYS suggest completing and submitting the assignment beforehand as one of the solutions.
 `.trim();
 
   const cleanedApiKey = apiKey.trim().replace(/^["']|["']$/g, '');
@@ -198,7 +194,10 @@ Rules:
   ];
 
   const ordered = preferredSubstrings
-    .flatMap((s) => supportedModels.filter((m) => (m.name || '').includes(s)))
+    .flatMap((s) => supportedModels.filter((m) => {
+      const name = (m.name || '').toLowerCase();
+      return name.includes(s) && !name.includes('tts') && !name.includes('vision') && !name.includes('embedding');
+    }))
     // Deduplicate by name
     .filter((m, idx, self) => idx === self.findIndex((x) => x.name === m.name));
 
@@ -233,14 +232,13 @@ Rules:
         json?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       const normalized = modelText ? normalizeGeminiText(modelText) : '';
+      // extractJsonBalanced handles nested objects correctly; fall back to raw only if balanced fails
       const extracted =
-        normalized && extractJson(normalized)
-          ? extractJson(normalized)
-          : normalized && extractJsonBalanced(normalized)
-            ? extractJsonBalanced(normalized)
-            : normalized.startsWith('{') && normalized.endsWith('}')
-              ? normalized
-              : null;
+        normalized && extractJsonBalanced(normalized)
+          ? extractJsonBalanced(normalized)
+          : normalized.startsWith('{') && normalized.endsWith('}')
+            ? normalized
+            : null;
 
       if (!extracted) {
         const finishReason = json?.candidates?.[0]?.finishReason;

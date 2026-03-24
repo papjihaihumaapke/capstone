@@ -1,4 +1,4 @@
-import { format, addWeeks, isAfter, startOfDay } from 'date-fns';
+import { format, addWeeks, startOfDay } from 'date-fns';
 import type { ScheduleItem, Conflict, ShiftItem, ClassItem, AssignmentItem } from '../types';
 
 /**
@@ -6,9 +6,12 @@ import type { ScheduleItem, Conflict, ShiftItem, ClassItem, AssignmentItem } fro
  * Throws a descriptive Error if the date is malformed or invalid.
  */
 export function normalizeDate(dateStr: string): string {
-  const match = dateStr.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  // Accept 1- or 2-digit month/day (e.g. "2024-1-5" and "2024-01-05" are the same date)
+  const match = dateStr.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (!match) throw new Error(`Invalid date format for ${dateStr}. Expected YYYY-MM-DD.`);
-  const dateStrSafe = `${match[1]}-${match[2]}-${match[3]}`;
+  const month = String(Number(match[2])).padStart(2, '0');
+  const day = String(Number(match[3])).padStart(2, '0');
+  const dateStrSafe = `${match[1]}-${month}-${day}`;
   const dt = new Date(dateStrSafe + 'T00:00:00');
   if (Number.isNaN(dt.getTime())) throw new Error(`Invalid date value: ${dateStr}`);
   return dateStrSafe;
@@ -101,43 +104,64 @@ type Interval = {
 
 export function expandRecurringDates(item: ClassItem | ShiftItem, windowWeeks = 8): string[] {
   const baseDateStr = normalizeDate(item.date);
-  const dates = [baseDateStr];
-  if (!item.repeats_weekly) return dates;
-  
+  if (!item.repeats_weekly) return [baseDateStr];
+
   const today = startOfDay(new Date());
   const maxDate = addWeeks(today, windowWeeks);
-  
-  let current = new Date(`${baseDateStr}T00:00:00`);
-  while (true) {
-    current = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000); // Add 7 days exactly
-    if (isAfter(current, maxDate)) break;
-    dates.push(format(current, 'yyyy-MM-dd'));
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+
+  const baseMs = new Date(`${baseDateStr}T00:00:00`).getTime();
+  const todayMs = today.getTime();
+  const maxMs = maxDate.getTime();
+
+  // Jump directly to the first occurrence on or after today — avoids looping through
+  // potentially years of past weeks when the base date is far in the past (bug: phantom
+  // conflicts with old items on the same weekday from a previous year).
+  let currentMs = baseMs;
+  if (currentMs < todayMs) {
+    const weeksToSkip = Math.ceil((todayMs - currentMs) / msPerWeek);
+    currentMs = baseMs + weeksToSkip * msPerWeek;
+  }
+
+  const dates: string[] = [];
+  while (currentMs <= maxMs) {
+    dates.push(format(new Date(currentMs), 'yyyy-MM-dd'));
+    currentMs += msPerWeek;
   }
   return dates;
 }
 
 function getIntervals(item: ScheduleItem): Interval[] {
+  // Only detect conflicts for today and future dates — past events already happened.
+  const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
+
   if (isAssignment(item)) {
-     const d = item.due_date || item.date;
-     const t = item.due_time || item.start_time;
-     if (!d || !t) return [];
-     const startMinutes = timeToMinutes(t);
-     return [{ item, startMinutes, endMinutes: startMinutes, dateStr: normalizeDate(d) }];
+    const d = item.due_date || item.date;
+    const t = item.due_time || item.start_time;
+    if (!d || !t) return [];
+    const dateStr = normalizeDate(d);
+    if (dateStr < todayStr) return [];
+    const startMinutes = timeToMinutes(t);
+    return [{ item, startMinutes, endMinutes: startMinutes, dateStr }];
   }
-  
+
   if (isShift(item) || isClass(item)) {
     let startMinutes = timeToMinutes(item.start_time);
     let endMinutes = timeToMinutes(item.end_time);
-    
+
     // Handle overnight shifts crossing midnight
     if (endMinutes < startMinutes) {
       endMinutes += 1440;
     }
-    
+
     const dates = expandRecurringDates(item as any);
-    return dates.map(d => ({ item, startMinutes, endMinutes, dateStr: d }));
+    // expandRecurringDates already skips to today for recurring items; this filter
+    // also covers non-recurring items whose single date is in the past.
+    return dates
+      .filter(d => d >= todayStr)
+      .map(d => ({ item, startMinutes, endMinutes, dateStr: d }));
   }
-  
+
   return [];
 }
 
@@ -202,7 +226,7 @@ export function calculateConflicts(items: ScheduleItem[]): Conflict[] {
         const item = validateScheduleItem(raw);
         flatIntervals.push(...getIntervals(item));
       } catch (e) {
-        console.warn(`Skipping invalid item: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        // Silently skip corrupted legacy items in the DB
       }
    }
    
@@ -216,7 +240,7 @@ export function calculateConflicts(items: ScheduleItem[]): Conflict[] {
        const { severity, start, end } = intervalsOverlap(invA, invB);
        if (severity === 'none') continue;
        
-       const idPair = [invA.item.id, invB.item.id].sort().join('|');
+       const idPair = [invA.item.id, invB.item.id].sort().join('|') + '|' + invA.dateStr;
        
        const existing = dedupeMap.get(idPair);
        // Overwrite if new severity is critical over a previous minor
@@ -236,4 +260,18 @@ export function calculateConflicts(items: ScheduleItem[]): Conflict[] {
    }
    
    return Array.from(dedupeMap.values());
+}
+
+export function itemOccursOnDate(item: ScheduleItem, targetDateStr: string) {
+  if (item.type === 'assignment') {
+    const d = item.due_date || item.date;
+    return d === targetDateStr;
+  }
+  if (item.type === 'class' && item.repeats_weekly) {
+    if (targetDateStr < item.date) return false;
+    const targetDay = new Date(targetDateStr + 'T00:00:00').getDay();
+    const itemDay = new Date(item.date + 'T00:00:00').getDay();
+    return targetDay === itemDay;
+  }
+  return item.date === targetDateStr;
 }

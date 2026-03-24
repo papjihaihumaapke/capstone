@@ -1,11 +1,11 @@
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import ScheduleItemCard from '../components/ScheduleItemCard';
 import MiniCalendar from '../components/MiniCalendar';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { itemOccursOnDate } from '../lib/conflictEngine';
 import { Calendar, CheckCircle } from 'lucide-react';
-
 import type { Conflict, ScheduleItem } from '../types';
 
 function getGreeting() {
@@ -21,39 +21,33 @@ function getGreeting() {
 export default function Home() {
 	const navigate = useNavigate();
 	const ctx = useContext(AppContext);
-	const { items, conflicts, detectConflicts } = ctx || {};
+	const { items, conflicts } = ctx || {};
 	const [activeTab, setActiveTab] = useState<'today' | 'suggestions'>('today');
 
-	useEffect(() => {
-		detectConflicts && detectConflicts();
-	}, [items]);
+	const [selectedDate, setSelectedDate] = useState(new Date());
+	const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+	const realTodayStr = format(new Date(), 'yyyy-MM-dd');
+	const isToday = selectedDateStr === realTodayStr;
 
-	const today = new Date();
-	const todayStr = format(today, 'yyyy-MM-dd');
 	const todaysItems = (items || [])
-		.filter(i => {
-			const itemDate = i.type === 'assignment' ? (i.due_date || i.date) : i.date;
-			return itemDate === todayStr;
-		})
+		.filter(i => itemOccursOnDate(i, selectedDateStr))
 		.sort((a, b) => {
 			const timeA = a.type === 'assignment' ? (a.due_time || a.start_time || '') : a.start_time;
 			const timeB = b.type === 'assignment' ? (b.due_time || b.start_time || '') : b.start_time;
 			return timeA.localeCompare(timeB);
 		});
 		
-	// Only show assignments due today or in the future, and not completed
+	// Show all incomplete assignments (including overdue ones)
 	const assignments = (items || [])
 		.filter((i): i is import('../types').AssignmentItem => i.type === 'assignment')
-		.filter(i => {
-			const d = i.due_date || i.date;
-			return d && d >= todayStr && !i.completed;
-		})
+		.filter(i => !i.completed)
 		.sort((a, b) => {
 			const dA = a.due_date || a.date || '';
 			const dB = b.due_date || b.date || '';
 			return dA.localeCompare(dB);
 		});
-	const unresolved = (conflicts || []).find(c => !c.resolved && getConflictDateStr(c) === todayStr);
+	const todayUnresolved = (conflicts || []).filter(c => !c.resolved && getConflictDateStr(c) === selectedDateStr);
+	const unresolved = todayUnresolved[0] ?? null;
 
 	const horizonDays = 14;
 	const endDate = useMemo(() => {
@@ -120,9 +114,9 @@ export default function Home() {
 		return (conflicts || [])
 			.filter(c => !c.resolved)
 			.map(c => ({ c, dateStr: getConflictDateStr(c) }))
-			.filter(x => x.dateStr >= todayStr && x.dateStr <= endStr)
+			.filter(x => x.dateStr >= realTodayStr && x.dateStr <= endStr)
 			.sort((x, y) => x.dateStr.localeCompare(y.dateStr));
-	}, [conflicts, todayStr, endStr]);
+	}, [conflicts, realTodayStr, endStr]);
 
 	return (
     <div className="relative min-h-screen bg-background animate-fadeIn">
@@ -134,9 +128,9 @@ export default function Home() {
 						<div className="pt-6 pb-2">
 							<div className="flex items-start justify-between gap-3">
 								<div>
-									<h2 className="font-display text-2xl font-bold">Good {getGreeting()},</h2>
+									<h2 className="font-display text-2xl font-bold">{isToday ? `Good ${getGreeting()},` : 'Schedule for'}</h2>
 									<div className="text-xs text-textSecondary mt-1 mb-2">
-										{format(today, 'EEEE, MMM d')}
+										{format(selectedDate, 'EEEE, MMM d')}
 									</div>
 								</div>
 								<button
@@ -153,10 +147,18 @@ export default function Home() {
 									onClick={() => navigate(`/conflict/${unresolved.id}`)}
 								>
 									<div className={`text-sm font-bold ${unresolved.severity === 'minor' ? 'text-orange-600' : 'text-red-600'}`}>
-										⚠ {unresolved.severity === 'minor' ? `Tight Schedule: ${unresolved.item_a.title} & ${unresolved.item_b.title}` : `Conflict: ${unresolved.item_a.title} vs ${unresolved.item_b.title}`}
+										⚠ {todayUnresolved.length > 1
+											? `${todayUnresolved.length} conflicts on ${format(selectedDate, 'MMM d')}`
+											: unresolved.severity === 'minor'
+												? `Tight Schedule: ${unresolved.item_a.title} & ${unresolved.item_b.title}`
+												: `Conflict: ${unresolved.item_a.title} vs ${unresolved.item_b.title}`}
 									</div>
 									<div className="text-xs text-textSecondary">
-										{unresolved.severity === 'minor' ? 'These events are scheduled very close together. Tap to review.' : 'Tap to resolve this schedule overlap.'}
+										{todayUnresolved.length > 1
+											? 'Tap to review the first conflict.'
+											: unresolved.severity === 'minor'
+												? 'These events are scheduled very close together. Tap to review.'
+												: 'Tap to resolve this schedule overlap.'}
 									</div>
 								</div>
 							) : (
@@ -191,7 +193,7 @@ export default function Home() {
 						{activeTab === 'today' ? (
 							/* TODAY Section */
 							<div className="mt-2">
-								<div className="text-[11px] text-textSecondary uppercase font-semibold mb-2 tracking-widest">today</div>
+								<div className="text-[11px] text-textSecondary uppercase font-semibold mb-2 tracking-widest">{isToday ? 'today' : format(selectedDate, 'MMM d')}</div>
 								{todaysItems.length === 0 ? (
 									<div className="flex flex-col items-center justify-center py-12 animate-fadeIn">
 										<Calendar size={42} className="text-gray-200 mb-4" strokeWidth={1} />
@@ -257,9 +259,11 @@ export default function Home() {
 								{assignments.map(item => {
 									const d = item.due_date || item.date;
 									const due = d ? new Date(`${d}T00:00:00`) : null;
-									const days = due ? Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
-									const dueText = days === 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : days !== null ? `Due in ${days} days` : '';
-									const dueColor = days !== null && days <= 1 ? 'text-primary font-semibold' : days !== null && days <= 3 ? 'text-orange-400' : 'text-gray-400';
+									const todayMidnight = new Date();
+									todayMidnight.setHours(0, 0, 0, 0);
+									const days = due ? Math.round((due.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24)) : null;
+									const dueText = days === 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : days !== null && days > 1 ? `Due in ${days} days` : days !== null && days < 0 ? `Overdue by ${Math.abs(days)} days` : '';
+									const dueColor = days !== null && days < 0 ? 'text-red-500 font-bold' : days !== null && days <= 1 ? 'text-primary font-semibold' : days !== null && days <= 3 ? 'text-orange-400' : 'text-gray-400';
 									return (
 										<div key={`mobile-${item.id}`} className="mb-3">
 											<ScheduleItemCard
@@ -281,8 +285,8 @@ export default function Home() {
 						<div className="mb-6">
 							<MiniCalendar
 								items={items || []}
-								selectedDate={today}
-								onDateSelect={(date) => navigate(`/calendar?date=${date.toISOString().slice(0, 10)}`)}
+								selectedDate={selectedDate}
+								onDateSelect={setSelectedDate}
 							/>
 						</div>
 
@@ -296,9 +300,11 @@ export default function Home() {
 									{assignments.map(item => {
 					const d = item.due_date || item.date;
 					const due = d ? new Date(`${d}T00:00:00`) : null;
-					const days = due ? Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
-					const dueText = days === 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : days !== null ? `Due in ${days} days` : '';
-					const dueColor = days !== null && days <= 1 ? 'text-primary font-semibold' : days !== null && days <= 3 ? 'text-orange-400' : 'text-gray-400';
+					const todayMidnight = new Date();
+					todayMidnight.setHours(0, 0, 0, 0);
+					const days = due ? Math.round((due.getTime() - todayMidnight.getTime()) / (1000 * 60 * 60 * 24)) : null;
+					const dueText = days === 0 ? 'Due today' : days === 1 ? 'Due tomorrow' : days !== null && days > 1 ? `Due in ${days} days` : days !== null && days < 0 ? `Overdue by ${Math.abs(days)} days` : '';
+					const dueColor = days !== null && days < 0 ? 'text-red-500 font-bold' : days !== null && days <= 1 ? 'text-primary font-semibold' : days !== null && days <= 3 ? 'text-orange-400' : 'text-gray-400';
 					return (
 						<div key={item.id} className="mb-3">
 							<ScheduleItemCard

@@ -54,6 +54,7 @@ export default function ItemDetail() {
 
   const onDelete = async () => {
     if (!deleteItem) return;
+    if (!window.confirm('Delete this item? This cannot be undone.')) return;
     setSaving(true);
     try {
       await deleteItem(id);

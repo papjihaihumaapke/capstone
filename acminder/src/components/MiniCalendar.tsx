@@ -1,4 +1,5 @@
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
+import { itemOccursOnDate } from '../lib/conflictEngine';
 
 interface MiniCalendarProps {
   items: any[];
@@ -13,7 +14,7 @@ export default function MiniCalendar({ items, selectedDate, onDateSelect }: Mini
 
   const hasItems = (day: Date) => {
     const dateStr = format(day, 'yyyy-MM-dd');
-    return items.some((item) => item.date === dateStr);
+    return items.some((item) => itemOccursOnDate(item, dateStr));
   };
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

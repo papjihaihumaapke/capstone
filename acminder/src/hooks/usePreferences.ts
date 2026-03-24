@@ -14,13 +14,22 @@ export function usePreferences() {
     }
   }, []);
 
-  const updatePrefs = (newPrefs: typeof prefs) => {
-    setPrefs(newPrefs);
-    localStorage.setItem('acminder_prefs', JSON.stringify(newPrefs));
+  // Use functional updater to avoid stale closure when both toggles change rapidly
+  const setNotifications = (val: boolean) => {
+    setPrefs((prev) => {
+      const next = { ...prev, notifications: val };
+      localStorage.setItem('acminder_prefs', JSON.stringify(next));
+      return next;
+    });
   };
 
-  const setNotifications = (val: boolean) => updatePrefs({ ...prefs, notifications: val });
-  const setSmartSuggestions = (val: boolean) => updatePrefs({ ...prefs, smartSuggestions: val });
+  const setSmartSuggestions = (val: boolean) => {
+    setPrefs((prev) => {
+      const next = { ...prev, smartSuggestions: val };
+      localStorage.setItem('acminder_prefs', JSON.stringify(next));
+      return next;
+    });
+  };
 
   return { prefs, setNotifications, setSmartSuggestions };
 }
