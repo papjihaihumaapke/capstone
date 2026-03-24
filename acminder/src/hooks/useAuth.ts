@@ -9,7 +9,13 @@ export function useAuth() {
     try {
       setLoading(true);
       setError(null);
-      const { error: authError } = await supabase.auth.signUp({ email, password: pass });
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
       if (authError) throw authError;
       return true;
     } catch (err: unknown) {

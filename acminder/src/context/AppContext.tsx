@@ -9,7 +9,7 @@ interface AppContextType {
   items: ScheduleItem[];
   conflicts: Conflict[];
   loading: boolean;
-  fetchItems: () => Promise<void>;
+  fetchItems: () => Promise<ScheduleItem[] | undefined>;
   addItem: (item: Omit<ScheduleItem, 'id' | 'created_at'>) => Promise<void>;
   updateItem: (id: string, updates: Partial<ScheduleItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
@@ -36,13 +36,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [importedSources, setImportedSources] = useState<Set<string>>(new Set());
 
   const fetchItems = async () => {
-    if (!user?.id) return;
+    if (!user?.id) return undefined;
     try {
       setLoading(true);
       const data = await getItems(user.id);
       setItems(data);
+      return data;
     } catch (error) {
       console.error('Failed to fetch items:', error);
+      return undefined;
     } finally {
       setLoading(false);
     }

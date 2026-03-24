@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 
 const SLIDES = [
-  { id: 1, title: 'Smart', desc: 'Never miss a deadline again' },
-  { id: 2, title: 'Gentle', desc: 'Conflict alerts before they happen' },
-  { id: 3, title: 'Flexible', desc: 'Works with your college and work schedule' }
+  { id: 1, title: 'Import Schedules', desc: 'Upload your class timetable and work shifts by picking your exported .ics files.', image: '/onboarding_smart.png' },
+  { id: 2, title: 'Detect Conflicts', desc: 'AcMinder instantly scans your calendars and highlights overlapping events or tight deadlines.', image: '/onboarding_gentle.png' },
+  { id: 3, title: 'Resolve with AI', desc: 'Get smart, actionable suggestions on how to shuffle your tasks and fix schedule conflicts.', image: '/onboarding_flexible.png' }
 ];
 
 export default function Onboarding() {
@@ -23,23 +23,31 @@ export default function Onboarding() {
       {/* Swipeable Illustration Area */}
       <div className="flex-1 flex items-center justify-center pt-8">
         <div className="w-full aspect-square max-h-72 rounded-[2rem] bg-[#FFF0EC] relative flex items-center justify-center transform transition-all duration-300 ease-out shadow-sm overflow-hidden">
-          <span className="font-display font-medium text-primary opacity-60">
-            Slide {current + 1} Illustration
-          </span>
+          {SLIDES.map((slide, idx) => (
+            <img
+              key={slide.id}
+              src={slide.image}
+              alt={slide.title}
+              className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-out ${current === idx ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+            />
+          ))}
         </div>
       </div>
 
       {/* Text Content with Fade Transition */}
-      <div className="mt-12 h-28 relative">
-        {SLIDES.map((slide, idx) => (
-          <div 
-            key={slide.id}
-            className={`absolute inset-0 w-full transition-all duration-500 ease-out flex flex-col items-center text-center ${current === idx ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8 pointer-events-none'}`}
-          >
-            <h2 className="text-3xl font-display font-bold text-textPrimary mb-3">{slide.title}</h2>
-            <p className="text-base font-body text-textSecondary max-w-[280px] leading-relaxed">{slide.desc}</p>
-          </div>
-        ))}
+      <div className="mt-12 h-28 flex flex-col items-center text-center px-4">
+        <h2 
+          key={`title-${current}`}
+          className="text-3xl font-display font-bold text-textPrimary mb-3 animate-fadeIn"
+        >
+          {SLIDES[current].title}
+        </h2>
+        <p 
+          key={`desc-${current}`}
+          className="text-base font-body text-textSecondary max-w-[280px] leading-relaxed animate-fadeIn"
+        >
+          {SLIDES[current].desc}
+        </p>
       </div>
 
       {/* Navigation & Indicators */}

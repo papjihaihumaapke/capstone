@@ -10,3 +10,14 @@
     @apply font-display;
   }
 }
+
+/* Custom styles for native date/time inputs to hide default icons but keep them clickable */
+.custom-datetime-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: pointer;
+}

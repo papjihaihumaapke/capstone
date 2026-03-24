@@ -16,6 +16,23 @@ export const getItems = async (userId: string): Promise<ScheduleItem[]> => {
   return data || [];
 };
 
+export const ensureProfileExists = async (userId: string, email: string): Promise<boolean> => {
+  // Check if profile exists
+  const { error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', userId)
+    .single();
+    
+  // PGRST116 means zero rows returned
+  if (error && error.code === 'PGRST116') {
+    // Create the profile
+    await supabase.from('profiles').insert({ id: userId, email });
+    return true; // Profile was just created (is new user)
+  }
+  return false; // Profile already existed
+};
+
 export const addItem = async (item: Omit<ScheduleItem, 'id' | 'created_at'>): Promise<ScheduleItem> => {
   const { data, error } = await supabase
     .from('schedule_items')

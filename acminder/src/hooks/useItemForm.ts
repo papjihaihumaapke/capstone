@@ -71,7 +71,7 @@ export function useItemForm() {
           location: data.location,
           role: data.role,
           user_id: ctx?.user?.id || ''
-        });
+        } as any);
       } else if (activeTab === 'class') {
         const data = formData.class;
         await addItem({
@@ -83,7 +83,7 @@ export function useItemForm() {
           location: data.location,
           repeats_weekly: data.repeats_weekly,
           user_id: ctx?.user?.id || ''
-        });
+        } as any);
       } else if (activeTab === 'assignment') {
         const data = formData.assignment;
         const time = data.due_time || '00:00';
@@ -97,7 +97,7 @@ export function useItemForm() {
           due_date: data.due_date,
           due_time: data.due_time,
           user_id: ctx?.user?.id || ''
-        });
+        } as any);
       }
       detectConflicts && detectConflicts();
       showToast && showToast('Item added successfully!');

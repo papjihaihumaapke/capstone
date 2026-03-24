@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Trash2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import type { ScheduleItem } from '../types';
 
 export default function ItemDetail() {
   const { id } = useParams();
@@ -10,7 +9,7 @@ export default function ItemDetail() {
   const { items, updateItem, deleteItem, fetchItems, showToast } = useAppContext();
 
   const item = useMemo(() => (items || []).find((i) => i.id === id), [items, id]);
-  const [draft, setDraft] = useState<Partial<ScheduleItem>>({});
+  const [draft, setDraft] = useState<any>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -19,24 +18,25 @@ export default function ItemDetail() {
 
   useEffect(() => {
     if (!item) return;
+    const i = item as any;
     setDraft({
-      title: item.title,
-      date: item.date,
-      start_time: item.start_time,
-      end_time: item.end_time,
-      location: item.location || '',
-      role: item.role || '',
-      repeats_weekly: !!item.repeats_weekly,
-      due_date: item.due_date,
-      due_time: item.due_time,
-      course: item.course || '',
+      title: i.title,
+      date: i.date,
+      start_time: i.start_time,
+      end_time: i.end_time,
+      location: i.location || '',
+      role: i.role || '',
+      repeats_weekly: !!i.repeats_weekly,
+      due_date: i.due_date,
+      due_time: i.due_time,
+      course: i.course || '',
     });
   }, [item]);
 
   if (!id) return null;
   if (!item) return <div className="p-6 text-sm text-textSecondary">Loading item…</div>;
 
-  const set = (key: keyof ScheduleItem, value: any) => setDraft((p) => ({ ...p, [key]: value }));
+  const set = (key: string, value: any) => setDraft((p: any) => ({ ...p, [key]: value }));
 
   const onSave = async () => {
     if (!updateItem) return;

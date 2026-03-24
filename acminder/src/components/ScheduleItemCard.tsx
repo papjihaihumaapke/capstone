@@ -1,9 +1,10 @@
-import { Bell } from 'lucide-react';
+import { Pencil, CheckCircle2 } from 'lucide-react';
 import type { ScheduleItem } from '../types';
 
 function formatTime12(timeStr: string | undefined) {
   if (!timeStr) return '';
-  const t = timeStr.trim();
+  // Strip seconds if present (HH:MM:SS → HH:MM)
+  const t = timeStr.trim().replace(/^(\d{1,2}:\d{2}):\d{2}$/, '$1');
   // If it's already in 12-hour format, just return it.
   if (/[AaPp][Mm]$/.test(t)) return t;
 
@@ -20,8 +21,9 @@ function formatTime12(timeStr: string | undefined) {
 
 interface Props {
   item: ScheduleItem;
-  hasConflict?: boolean;
+  conflictSeverity?: 'none' | 'critical' | 'minor';
   onClick?: () => void;
+  onMarkDone?: () => void;
 }
 
 const TYPE_STYLES = {
@@ -30,7 +32,7 @@ const TYPE_STYLES = {
   assignment: 'bg-yellow-500',
 };
 
-export default function ScheduleItemCard({ item, hasConflict, onClick }: Props) {
+export default function ScheduleItemCard({ item, conflictSeverity = 'none', onClick, onMarkDone }: Props) {
   return (
     <div
       onClick={onClick}
@@ -50,24 +52,40 @@ export default function ScheduleItemCard({ item, hasConflict, onClick }: Props) 
           </p>
         ) : (
           <p className="font-body text-sm text-textSecondary truncate">
-            Due: {item.due_date} {formatTime12(item.due_time)}
+            Due: {(item as any).due_date} {formatTime12((item as any).due_time)}
           </p>
         )}
-        {item.location && (
-          <p className="font-body text-xs text-gray-400 truncate mt-1">{item.location}</p>
+        {(item as any).location && (
+          <p className="font-body text-xs text-gray-400 truncate mt-1">{(item as any).location}</p>
         )}
       </div>
 
       {/* Action / Badges */}
       <div className="flex flex-col items-end gap-2 shrink-0">
-        {hasConflict && (
+        {conflictSeverity === 'critical' && (
           <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full uppercase tracking-wide">
             Conflict
           </span>
         )}
-        <button className="p-2 -mr-2 text-gray-300 hover:text-primary transition-colors">
-          <Bell size={20} />
-        </button>
+        {conflictSeverity === 'minor' && (
+          <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] font-bold rounded-full uppercase tracking-wide">
+            Tight Schedule
+          </span>
+        )}
+        <div className="flex items-center gap-1">
+          {onMarkDone && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onMarkDone(); }}
+              className="p-2 text-gray-300 hover:text-green-500 transition-colors"
+              title="Mark as done"
+            >
+              <CheckCircle2 size={20} />
+            </button>
+          )}
+          <button className="p-2 -mr-2 text-gray-300 hover:text-primary transition-colors">
+            <Pencil size={18} />
+          </button>
+        </div>
       </div>
     </div>
   );

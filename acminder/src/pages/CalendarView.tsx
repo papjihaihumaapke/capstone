@@ -24,12 +24,26 @@ export default function CalendarView() {
   }, [qpDate]);
 
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-  const todaysItems = (items || []).filter(i => i.date === selectedDateStr).sort((a, b) => a.start_time.localeCompare(b.start_time));
+  const todaysItems = (items || [])
+    .filter(i => {
+      const itemDate = i.type === 'assignment' ? (i.due_date || i.date) : i.date;
+      return itemDate === selectedDateStr;
+    })
+    .sort((a, b) => {
+      const timeA = a.type === 'assignment' ? (a.due_time || a.start_time || '') : a.start_time;
+      const timeB = b.type === 'assignment' ? (b.due_time || b.start_time || '') : b.start_time;
+      return timeA.localeCompare(timeB);
+    });
 
   const sectionTitle = isToday(selectedDate) ? "TODAY'S SCHEDULE" : format(selectedDate, 'EEEE, MMMM d');
 
   const prevMonth = () => setSelectedDate((d) => addMonths(d, -1));
   const nextMonth = () => setSelectedDate((d) => addMonths(d, 1));
+
+  const getConflictSeverity = (itemId: string) => {
+    const c = (conflicts || []).find(c => (c.item_a.id === itemId || c.item_b.id === itemId) && !c.resolved);
+    return c ? (c.severity || 'critical') : 'none';
+  };
 
   return (
     <div className="relative min-h-screen bg-background animate-fadeIn">
@@ -70,7 +84,7 @@ export default function CalendarView() {
                 <ScheduleItemCard
                   key={item.id}
                   item={item}
-                  hasConflict={!!(conflicts || []).find(c => (c.item_a.id === item.id || c.item_b.id === item.id) && !c.resolved)}
+                  conflictSeverity={getConflictSeverity(item.id)}
                   onClick={() => navigate(`/item/${item.id}`)}
                 />
               ))}

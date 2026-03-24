@@ -16,10 +16,14 @@ export default function Splash() {
         Stay on top of tasks, deadlines and important events effortlessly.
       </p>
 
-      {/* Decorative Core Placeholder */}
+      {/* Classroom Illustration */}
       <div className="flex-1 flex flex-col justify-center items-center py-10">
-        <div className="w-full aspect-square max-h-64 rounded-3xl bg-[#FFF0EC] flex items-center justify-center shadow-sm">
-          <span className="font-display font-medium text-primary opacity-60">Illustration</span>
+        <div className="w-full aspect-square max-h-64 rounded-3xl overflow-hidden shadow-sm">
+          <img
+            src="/splash_classroom.png"
+            alt="Classroom illustration"
+            className="w-full h-full object-cover"
+          />
         </div>
       </div>
 

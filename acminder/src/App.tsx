@@ -6,6 +6,7 @@ import Splash from './pages/Splash';
 import Onboarding from './pages/Onboarding';
 import SignUp from './pages/SignUp';
 import Login from './pages/Login';
+import VerifyEmail from './pages/VerifyEmail';
 import ImportSchedule from './pages/ImportSchedule';
 import Home from './pages/Home';
 import CalendarView from './pages/CalendarView';
@@ -24,10 +25,11 @@ export default function App() {
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/import" element={<ImportSchedule />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
-        {/* App routes — protected + wrapped in AppLayout (nav) */}
+        {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
+          <Route path="/import" element={<ImportSchedule />} />
           <Route element={<AppLayout />}>
             <Route path="/home" element={<Home />} />
             <Route path="/calendar" element={<CalendarView />} />

@@ -2,7 +2,7 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { ArrowLeft, AlertTriangle, Calendar, CheckCircle, Sparkles } from 'lucide-react';
-import { generateConflictWithGemini } from '../lib/gemini';
+import { generateConflictWithGemini, type GeminiConflictResult } from '../lib/gemini';
 import { timeToMinutes } from '../lib/conflictEngine';
 import type { ScheduleItem } from '../types';
 
@@ -19,7 +19,8 @@ function toHHMM(mins: number) {
 
 function formatTime12(timeStr: string | undefined) {
   if (!timeStr) return '';
-  const t = timeStr.trim();
+  // Strip seconds if present (HH:MM:SS → HH:MM)
+  const t = timeStr.trim().replace(/^(\d{1,2}:\d{2}):\d{2}$/, '$1');
   // If it's already in "h:mm AM/PM" form, keep it.
   if (/[AaPp][Mm]$/.test(t)) return t;
   const match = t.match(/^(\d{1,2}):(\d{2})$/);
@@ -44,9 +45,12 @@ export default function ConflictDetail() {
   const itemA = conflict.item_a;
   const itemB = conflict.item_b;
 
-  const conflictDate = useMemo(() => {
-    return itemA.type === 'assignment' ? itemA.due_date || itemA.date : itemA.date;
-  }, [itemA]);
+  const conflictDate = conflict.date || '';
+
+  const overlapWindow = useMemo(() => {
+    if (!conflict.overlap_start || !conflict.overlap_end) return null;
+    return { start_time: conflict.overlap_start, end_time: conflict.overlap_end };
+  }, [conflict]);
 
   const getIntervalForItem = (item: ScheduleItem) => {
     if (item.type === 'assignment') {
@@ -60,21 +64,12 @@ export default function ConflictDetail() {
     return { date: item.date, start: timeToMinutes(item.start_time), end: timeToMinutes(item.end_time) };
   };
 
-  const aInterval = useMemo(() => getIntervalForItem(itemA), [itemA]);
-  const bInterval = useMemo(() => getIntervalForItem(itemB), [itemB]);
-
-  const overlapWindow = useMemo(() => {
-    if (!conflictDate || !aInterval || !bInterval) return null;
-    const start = Math.max(aInterval.start, bInterval.start);
-    const end = Math.min(aInterval.end, bInterval.end);
-    if (end <= start) return null;
-    return { start_time: toHHMM(start), end_time: toHHMM(end) };
-  }, [aInterval, bInterval, conflictDate]);
+  const isMinor = conflict.severity === 'minor';
 
   const subtitle =
     conflictDate && overlapWindow
       ? `${formatDate(conflictDate)} · ${formatTime12(overlapWindow.start_time)} – ${formatTime12(overlapWindow.end_time)}`
-      : 'Conflict detected';
+      : isMinor ? 'Events are scheduled too close to each other' : 'Conflict detected';
 
   const handleResolve = () => {
     resolveConflict && resolveConflict(id!);
@@ -84,39 +79,23 @@ export default function ConflictDetail() {
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
-  const [aiSuggestions, setAiSuggestions] = useState<
-    Array<{
-      move_item_id: string;
-      move_item_type: 'shift' | 'class' | 'assignment';
-      proposed_start_time?: string;
-      proposed_end_time?: string;
-      reason: string;
-      alternative_times?: Array<{ start_time: string; end_time: string }>;
-    }>
-  >([]);
+  const [aiSuggestions, setAiSuggestions] = useState<GeminiConflictResult['suggestions']>([]);
   const [aiError, setAiError] = useState<string | null>(null);
 
   const closeAlternatives = useMemo(() => {
     if (!items || !conflictDate || !overlapWindow) return [];
 
-    // Only propose moves for items the user can actually move.
-    // In this app, weekly classes should not be "shifted" just by changing time.
-    const isMovableClass = (item: ScheduleItem) => item.type === 'class' && !item.repeats_weekly;
-
+    // Students cannot reschedule university classes — only shifts and assignments are movable.
     const movable =
       itemA.type === 'shift'
         ? itemA
         : itemB.type === 'shift'
           ? itemB
-          : isMovableClass(itemA)
+          : itemA.type === 'assignment'
             ? itemA
-            : isMovableClass(itemB)
+            : itemB.type === 'assignment'
               ? itemB
-              : itemA.type === 'assignment'
-                ? itemA
-                : itemB.type === 'assignment'
-                  ? itemB
-                  : null;
+              : null;
 
     if (!movable) return [];
     const movableInterval = getIntervalForItem(movable);
@@ -167,7 +146,7 @@ export default function ConflictDetail() {
         alternative_times,
       },
     ];
-  }, [items, conflictDate, overlapWindow, itemA, itemB, aInterval, bInterval]);
+  }, [items, conflictDate, overlapWindow, itemA, itemB]);
 
   const conflictDateKey = conflictDate || '';
   const overlapWindowKey = overlapWindow ? `${overlapWindow.start_time}-${overlapWindow.end_time}` : '';
@@ -183,10 +162,12 @@ export default function ConflictDetail() {
 
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
       if (!apiKey) {
-        setAiSummary(`This ${itemA.type} and ${itemB.type} overlap between ${overlapWindow?.start_time ?? ''} and ${overlapWindow?.end_time ?? ''}.`);
+        setAiSummary(isMinor 
+          ? `This ${itemA.type} and ${itemB.type} are scheduled between ${formatTime12(overlapWindow?.start_time)} and ${formatTime12(overlapWindow?.end_time)}.`
+          : `This ${itemA.type} and ${itemB.type} overlap between ${formatTime12(overlapWindow?.start_time)} and ${formatTime12(overlapWindow?.end_time)}.`);
         return;
       }
-      if (!conflictDate || !overlapWindow || !closeAlternatives.length) return;
+      if (!conflictDate || !overlapWindow) return;
 
       setAiLoading(true);
       try {
@@ -222,8 +203,8 @@ export default function ConflictDetail() {
         <button onClick={() => navigate('/home')} className="mr-4" aria-label="Go back">
           <ArrowLeft size={24} />
         </button>
-        <AlertTriangle size={24} className="text-primary mr-2" />
-        <h1 className="text-xl font-display font-bold">Schedule Conflict</h1>
+        <AlertTriangle size={24} className={`${isMinor ? 'text-orange-500' : 'text-primary'} mr-2`} />
+        <h1 className="text-xl font-display font-bold">{isMinor ? 'Tight Schedule' : 'Schedule Conflict'}</h1>
       </header>
 
       <p className="text-sm text-textSecondary mb-6">{subtitle}</p>
@@ -244,7 +225,7 @@ export default function ConflictDetail() {
                 ? `Due: ${formatTime12(itemA.due_time ?? itemA.start_time ?? '')}`
                 : `${formatTime12(itemA.start_time)} - ${formatTime12(itemA.end_time)}`}
             </p>
-            <p className="text-xs text-gray-400">{itemA.location || (itemA.type === 'shift' ? itemA.role : itemA.course)}</p>
+            <p className="text-xs text-gray-400">{(itemA as any).location || (itemA.type === 'shift' ? (itemA as any).role : (itemA as any).course)}</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 relative">
@@ -260,7 +241,7 @@ export default function ConflictDetail() {
                 ? `Due: ${formatTime12(itemB.due_time ?? itemB.start_time ?? '')}`
                 : `${formatTime12(itemB.start_time)} - ${formatTime12(itemB.end_time)}`}
             </p>
-            <p className="text-xs text-gray-400">{itemB.location || (itemB.type === 'shift' ? itemB.role : itemB.course)}</p>
+            <p className="text-xs text-gray-400">{(itemB as any).location || (itemB.type === 'shift' ? (itemB as any).role : (itemB as any).course)}</p>
           </div>
         </div>
       </section>
@@ -297,20 +278,28 @@ export default function ConflictDetail() {
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
               <Calendar size={24} className="text-primary mt-1" />
               <div>
-                <h3 className="font-semibold">Suggestions unavailable</h3>
+                <h3 className="font-semibold">
+                  {!import.meta.env.VITE_GEMINI_API_KEY ? 'Suggestions unavailable' : 'No suggestions found'}
+                </h3>
                 <p className="text-sm text-textSecondary">
-                  Add `VITE_GEMINI_API_KEY` to enable Gemini conflict suggestions.
+                  {!import.meta.env.VITE_GEMINI_API_KEY 
+                    ? 'Add `VITE_GEMINI_API_KEY` to enable Gemini conflict suggestions.' 
+                    : 'The AI could not find any available alternative time slots for this conflict.'}
                 </p>
               </div>
             </div>
           ) : null}
 
           {aiSuggestions.map((s, idx) => (
-            <div key={`${s.move_item_id}-${idx}`} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
+            <div key={idx} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
               <CheckCircle size={24} className="text-primary mt-1" />
               <div className="flex-1">
                 <h3 className="font-semibold">
-                  Move {s.move_item_type} to {formatTime12(s.proposed_start_time)} - {formatTime12(s.proposed_end_time)}
+                  {s.proposed_start_time && s.proposed_end_time 
+                    ? `Move ${s.move_item_type} to ${formatTime12(s.proposed_start_time)} - ${formatTime12(s.proposed_end_time)}`
+                    : s.move_item_type && s.move_item_type !== 'none' 
+                      ? `Adjust ${s.move_item_type}`
+                      : 'Recommendation'}
                 </h3>
                 <p className="text-sm text-textSecondary mt-1">{s.reason}</p>
                 {s.alternative_times?.length ? (

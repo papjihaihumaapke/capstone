@@ -1,8 +1,8 @@
 import type { ScheduleItem } from '../types';
 
 type TimingSuggestion = {
-  move_item_id: string;
-  move_item_type: ScheduleItem['type'];
+  move_item_id?: string;
+  move_item_type?: ScheduleItem['type'] | 'none';
   proposed_start_time?: string;
   proposed_end_time?: string;
   reason: string;
@@ -132,12 +132,12 @@ export async function generateConflictWithGemini(input: {
   const { apiKey, item_a, item_b, conflict_date, overlap_window, close_alternatives } = input;
 
   const prompt = `
-You are an expert scheduling assistant.
+You are a scheduling assistant helping a student manage conflicts between work shifts, university classes, and assignments.
 
 Conflict date: ${conflict_date}
 Overlap window: ${overlap_window.start_time} - ${overlap_window.end_time}
-Item A: ${item_a.type} "${item_a.title}" (date: ${item_a.date ?? item_a.due_date ?? ''}, time: ${item_a.start_time ?? item_a.due_time ?? ''} - ${item_a.end_time ?? ''})
-Item B: ${item_b.type} "${item_b.title}" (date: ${item_b.date ?? item_b.due_date ?? ''}, time: ${item_b.start_time ?? item_b.due_time ?? ''} - ${item_b.end_time ?? ''})
+Item A: ${item_a.type} "${item_a.title}" (date: ${(item_a as any).date ?? (item_a as any).due_date ?? ''}, time: ${(item_a as any).start_time ?? (item_a as any).due_time ?? ''} - ${(item_a as any).end_time ?? ''})
+Item B: ${item_b.type} "${item_b.title}" (date: ${(item_b as any).date ?? (item_b as any).due_date ?? ''}, time: ${(item_b as any).start_time ?? (item_b as any).due_time ?? ''} - ${(item_b as any).end_time ?? ''})
 
 Close alternatives (JSON). Pick ONLY from these alternatives:
 ${JSON.stringify(close_alternatives)}
@@ -147,21 +147,22 @@ Return ONLY this JSON (no markdown):
   "summary": "string",
   "suggestions": [
     {
-      "move_item_id": "string",
-      "move_item_type": "shift" | "class" | "assignment",
-      "proposed_start_time": "HH:MM",
-      "proposed_end_time": "HH:MM",
-      "reason": "string"
+      "move_item_id": "string (optional)",
+      "move_item_type": "shift | class | assignment | none",
+      "proposed_start_time": "HH:MM (optional)",
+      "proposed_end_time": "HH:MM (optional)",
+      "reason": "string (the advice or justification)"
     }
   ]
 }
 
 Rules:
-- summary: 1-2 sentences.
+- summary: 1-2 sentences explaining the conflict in plain English.
 - Provide exactly 2 suggestions.
-- For each suggestion, proposed_start_time/proposed_end_time MUST EXACTLY match one of the alternative_times windows for that move_item_id.
-- If you cannot generate valid suggestions, return:
-{ "summary": "Unable to generate valid suggestions.", "suggestions": [] }
+- CRITICAL: Provide ONLY logical, practical solutions (qualitative advice) on how to manage the conflict. DO NOT suggest mathematically moving items to different time slots.
+- For instance, suggest "Talk to your manager to leave 15 mins early", "Eat lunch during transit", etc.
+- If the conflict involves an assignment, ALWAYS suggest completing and submitting the assignment beforehand as one of your logical solutions.
+- For all suggestions, you MUST omit move_item_id, proposed_start_time, and proposed_end_time. Provide your entire advice in the "reason" field.
 `.trim();
 
   const cleanedApiKey = apiKey.trim().replace(/^["']|["']$/g, '');
