@@ -51,7 +51,7 @@ import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
 export default function Settings() {
   const navigate = useNavigate();
   const ctx = useContext(AppContext);
-  const { user, logout, showToast } = ctx || {};
+  const { user, logout } = ctx || {};
   const { signOut, signInWithGoogle } = useAuth();
   const { prefs, setNotifications, setSmartSuggestions } = usePreferences();
   const { sync, syncing } = useGoogleCalendar();
