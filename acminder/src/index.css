@@ -30,18 +30,7 @@
   }
 }
 
-/* Custom styles for native date/time inputs */
-.custom-datetime-input::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  z-index: 10;
-  opacity: 0;
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-}
+/* Native date/time inputs use browser-default picker — no custom overlay */
 
 /* Accessibility: Clear focus rings */
 :focus-visible {

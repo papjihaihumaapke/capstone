@@ -19,7 +19,16 @@ export function useAuth() {
       if (authError) throw authError;
       return true;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to sign up.');
+      let msg = err instanceof Error ? err.message : 'Failed to sign up.';
+      // CAMA-69: Detect rate-limit errors and provide recovery guidance
+      if (
+        msg.toLowerCase().includes('rate limit') ||
+        msg.toLowerCase().includes('too many requests') ||
+        msg.includes('429')
+      ) {
+        msg = 'Too many sign-up attempts. Please wait 60 seconds before trying again.';
+      }
+      setError(msg);
       return false;
     } finally {
       setLoading(false);
@@ -60,8 +69,13 @@ export function useAuth() {
       return true;
     } catch (err: unknown) {
       let msg = err instanceof Error ? err.message : 'Failed to sign in with Google.';
-      if (msg.toLowerCase().includes('provider') || msg.toLowerCase().includes('not enabled')) {
-        msg = 'Google login is currently disabled for this project. Please use your email/password.';
+      // CAMA-68: Provide a clear, actionable error when Google OAuth is unavailable
+      if (
+        msg.toLowerCase().includes('provider') ||
+        msg.toLowerCase().includes('not enabled') ||
+        msg.toLowerCase().includes('unsupported')
+      ) {
+        msg = 'Google sign-in is not available right now. Please use your email and password instead.';
       }
       setError(msg);
       return false;

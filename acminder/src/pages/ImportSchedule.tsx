@@ -104,8 +104,12 @@ export default function ImportSchedule() {
       <div className="max-w-lg lg:max-w-xl mx-auto w-full flex flex-col flex-1 px-4 lg:px-0">
         {/* Header */}
         <div className="pt-10 pb-6 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-black/5 active:scale-95 transition-all text-textSecondary">
-            <ChevronLeft size={24} />
+          <button
+            onClick={() => navigate('/home')}
+            className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center shadow-card hover:border-primary/30 active:scale-95 transition-all"
+            aria-label="Go back"
+          >
+            <ChevronLeft size={20} className="text-textSecondary" />
           </button>
           <h1 className="text-xl font-display font-semibold text-textPrimary">
             Import <span className="text-primary">Calendar</span>

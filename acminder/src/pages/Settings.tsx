@@ -1,9 +1,10 @@
-import { useContext } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { useAuth } from '../hooks/useAuth';
 import { usePreferences } from '../hooks/usePreferences';
-import { Mail, History, ChevronRight, Bell, Sparkles, Palette, Database, FileText, LogOut, CalendarDays } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { Mail, ChevronRight, Bell, Sparkles, FileText, LogOut, CalendarDays } from 'lucide-react';
 
 function SettingRow({
   icon: Icon,
@@ -56,6 +57,14 @@ export default function Settings() {
   const { prefs, setNotifications, setSmartSuggestions } = usePreferences();
   const { sync, syncing } = useGoogleCalendar();
 
+  // CAMA-89: Track actual Google connection state
+  const [googleConnected, setGoogleConnected] = useState(false);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setGoogleConnected(!!session?.provider_token);
+    });
+  }, [syncing]);
+
   const handleSignOut = async () => {
     if (window.confirm('Are you sure you want to log out?')) {
       await signOut();
@@ -84,11 +93,6 @@ export default function Settings() {
               icon={Mail}
               label="Email"
               right={<span className="text-sm text-textSecondary truncate max-w-[180px]">{user?.email}</span>}
-            />
-            <SettingRow
-              icon={History}
-              label="History"
-              right={<span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full uppercase">Soon</span>}
               borderBottom={false}
             />
           </div>
@@ -109,12 +113,18 @@ export default function Settings() {
               label={syncing ? 'Syncing...' : 'Sync Google Calendar'}
               right={
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-primary bg-primaryLight px-2 py-1 rounded-full">Live</span>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                    googleConnected 
+                      ? 'text-success bg-green-50' 
+                      : 'text-gray-400 bg-gray-100'
+                  }`}>
+                    {googleConnected ? 'Connected' : 'Not Connected'}
+                  </span>
                   <button 
                     onClick={(e) => { e.stopPropagation(); signInWithGoogle(); }}
-                    className="text-[10px] text-textSecondary underline"
+                    className="text-xs text-textSecondary underline"
                   >
-                    Reconnect
+                    {googleConnected ? 'Reconnect' : 'Connect'}
                   </button>
                 </div>
               }
@@ -137,15 +147,6 @@ export default function Settings() {
               icon={Sparkles}
               label="Smart Suggestions"
               right={<ToggleSwitch enabled={prefs.smartSuggestions} onToggle={() => setSmartSuggestions(!prefs.smartSuggestions)} />}
-            />
-            <SettingRow
-              icon={Palette}
-              label="Theme"
-              right={
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full uppercase">Soon</span>
-                </div>
-              }
               borderBottom={false}
             />
           </div>
@@ -155,11 +156,6 @@ export default function Settings() {
         <section className="mb-6">
           <div className="text-xs text-gray-400 uppercase tracking-widest font-semibold mb-3">Privacy</div>
           <div className="bg-white rounded-xl shadow-card border border-border overflow-hidden">
-            <SettingRow
-              icon={Database}
-              label="Data Usage"
-              right={<span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full uppercase">Soon</span>}
-            />
             <SettingRow
               icon={FileText}
               label="Terms"

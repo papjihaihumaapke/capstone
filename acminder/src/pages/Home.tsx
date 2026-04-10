@@ -25,7 +25,7 @@ function FilterChip({ active, label, onClick }: { active: boolean; label: string
     <button
       type="button"
       onClick={onClick}
-      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 ${
+      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 outline-none ${
         active ? 'bg-primary text-white shadow-blue' : 'bg-white text-textSecondary border border-border hover:border-primary/30'
       }`}
     >
@@ -39,7 +39,7 @@ function QuickStat({ value, label, description, accent }: { value: number; label
     <div className="flex-1 bg-white rounded-2xl p-3 shadow-card border border-border text-center flex flex-col items-center justify-center min-h-[90px] hover:shadow-elevated transition-shadow duration-200">
       <div className={`text-xl font-bold font-display ${accent}`}>{value}</div>
       <div className="text-[10px] text-textPrimary font-bold mt-1 leading-tight uppercase tracking-wide">{label}</div>
-      <div className="text-[8px] text-textSecondary mt-1 leading-tight max-w-[80px]">{description}</div>
+      <div className="text-[11px] text-textSecondary mt-1 leading-tight max-w-[80px]">{description}</div>
     </div>
   );
 }
@@ -257,9 +257,10 @@ export default function Home() {
                 </p>
                 <button
                   onClick={() => nav('/add')}
-                  className="mt-3 px-5 py-2 bg-primary text-white text-xs font-bold rounded-full hover:bg-primaryDark transition-colors shadow-blue"
+                  className="mt-3 px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-full hover:bg-primaryDark transition-colors shadow-blue flex items-center gap-1.5"
                 >
-                  + Add Item
+                  <Plus size={16} />
+                  Add Item
                 </button>
               </div>
             ) : (

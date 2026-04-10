@@ -50,6 +50,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [toast, setToast] = useState<{ message: string; visible: boolean } | null>(null);
   const [importedSources, setImportedSources] = useState<Set<string>>(new Set());
   const [isNewUser, setIsNewUser] = useState(false);
@@ -165,12 +166,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .catch((err) => console.error('Failed to ensure profile exists:', err));
     };
 
+    // Resolve the initial session first, then mark sessionChecked=true.
+    // This prevents ProtectedRoute from seeing user=null before Supabase
+    // has had a chance to restore the session from the OAuth redirect.
     supabase.auth.getSession().then(({ data: { session } }: any) => {
       const u = session?.user;
       setUser(u ? { id: u.id, email: u.email || '', name: '' } : null);
       checkProfile(u);
     }).catch(() => {
       setUser(null);
+    }).finally(() => {
+      setSessionChecked(true);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
@@ -183,18 +189,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   useEffect(() => {
+    if (!sessionChecked) return; // Don't act until the initial session check finishes
     if (user) {
       fetchItems();
     } else {
       setItems([]);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, sessionChecked]);
+
+  // Expose combined loading: stay true until both the session AND any item fetch finish.
+  const isLoading = !sessionChecked || loading;
 
   return (
     <AppContext.Provider
       value={{
-        user, items, conflicts, loading,
+        user, items, conflicts, loading: isLoading,
         fetchItems, addItem, updateItem, deleteItem, detectConflicts, updateConflict, resolveConflict,
         conflictCount: conflicts.filter((c) => !c.resolved).length,
         toast, showToast, hideToast,

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { ArrowLeft, AlertTriangle, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { generateConflictWithGemini, type GeminiConflictResult } from '../lib/gemini';
-import { itemOccursOnDate } from '../lib/conflictEngine';
+import { itemOccursOnDate, timeToMinutes } from '../lib/conflictEngine';
 
 const AI_CACHE_PREFIX = 'acminder_ai_cache_';
 
@@ -165,14 +165,43 @@ export default function ConflictDetail() {
             <div className="p-4 bg-surface rounded-2xl border border-gray-100">
                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">First Item</span>
                <h3 className="text-sm font-bold text-textPrimary truncate mt-1">{itemA.title}</h3>
-               <p className="text-xs text-textSecondary font-semibold mt-0.5">{formatTime12(itemA.start_time)}</p>
+               <p className="text-xs text-textSecondary font-semibold mt-0.5">{formatTime12(itemA.start_time)} – {formatTime12(itemA.end_time)}</p>
             </div>
             <div className="p-4 bg-surface rounded-2xl border border-gray-100">
                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Second Item</span>
                <h3 className="text-sm font-bold text-textPrimary truncate mt-1">{itemB.title}</h3>
-               <p className="text-xs text-textSecondary font-semibold mt-0.5">{formatTime12(itemB.start_time)}</p>
+               <p className="text-xs text-textSecondary font-semibold mt-0.5">{formatTime12(itemB.start_time)} – {formatTime12(itemB.end_time)}</p>
             </div>
           </div>
+
+          {/* Overlap Duration */}
+          {overlapWindow && (
+            <div className={`rounded-2xl p-4 flex items-center gap-4 ${isMinor ? 'bg-warning/5 border border-warning/20' : 'bg-danger/5 border border-danger/20'}`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isMinor ? 'bg-warning/10' : 'bg-danger/10'}`}>
+                <span className={`text-base font-bold ${isMinor ? 'text-warning' : 'text-danger'}`}>⏱</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-textSecondary uppercase tracking-wider">Overlap Duration</p>
+                <p className={`text-lg font-display font-bold ${isMinor ? 'text-warning' : 'text-danger'}`}>
+                  {(() => {
+                    const startMins = timeToMinutes(overlapWindow.start_time);
+                    const endMins = timeToMinutes(overlapWindow.end_time);
+                    const duration = Math.max(0, endMins - startMins);
+                    if (duration === 0) return 'Exact overlap';
+                    if (duration >= 60) {
+                      const h = Math.floor(duration / 60);
+                      const m = duration % 60;
+                      return m > 0 ? `${h}h ${m}min` : `${h} hour${h > 1 ? 's' : ''}`;
+                    }
+                    return `${duration} min`;
+                  })()}
+                </p>
+                <p className="text-xs text-textSecondary mt-0.5">
+                  {formatTime12(overlapWindow.start_time)} – {formatTime12(overlapWindow.end_time)}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <section className="space-y-4">

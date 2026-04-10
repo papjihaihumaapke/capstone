@@ -1,15 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Briefcase, BookOpen, FileText, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import TabSwitcher from '../components/TabSwitcher';
 import FormInput from '../components/FormInput';
 import { useItemForm } from '../hooks/useItemForm';
 
-const TYPE_META = {
-  'Work': { icon: Briefcase, color: 'text-primary', bg: 'bg-primaryLight' },
-  'College': { icon: BookOpen, color: 'text-accent', bg: 'bg-accentLight' },
-  'Tasks': { icon: FileText, color: 'text-warning', bg: 'bg-warning/10' },
-  'Habits': { icon: Sparkles, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-};
+
 
 export default function AddItem() {
   const navigate = useNavigate();
@@ -31,15 +26,14 @@ export default function AddItem() {
     if (mapped) setActiveTab(mapped);
   };
 
-  const meta = TYPE_META[currentTabDisplay as keyof typeof TYPE_META];
-  const Icon = meta.icon;
+
 
   const renderForm = () => {
     if (activeTab === 'shift') {
       const data = formData.shift;
       return (
         <>
-          <FormInput label="Description" placeholder="e.g. Morning Shift" value={data.title} onChange={(v) => updateFormData('title', v)} error={errors.title} />
+          <FormInput label="Title" placeholder="e.g. Opening shift" value={data.title} onChange={(v) => updateFormData('title', v)} error={errors.title} />
           <div className="grid grid-cols-2 gap-3">
             <FormInput label="Date" type="date" value={data.date} onChange={(v) => updateFormData('date', v)} error={errors.date} />
             <div />
@@ -94,7 +88,7 @@ export default function AddItem() {
             <FormInput label="Due Date" type="date" value={data.due_date} onChange={(v) => updateFormData('due_date', v)} error={errors.due_date} />
             <FormInput label="Due Time (optional)" type="time" value={data.due_time} onChange={(v) => updateFormData('due_time', v)} />
           </div>
-          <FormInput label="Course / Subject" placeholder="e.g. History 101" value={data.course} onChange={(v) => updateFormData('course', v)} />
+          <FormInput label="Course" placeholder="e.g. CS 101" value={data.course} onChange={(v) => updateFormData('course', v)} />
         </>
       );
     }
@@ -124,7 +118,7 @@ export default function AddItem() {
             <FormInput label="Start Time" type="time" value={data.start_time} onChange={(v) => updateFormData('start_time', v)} error={errors.start_time} />
             <FormInput label="End Time" type="time" value={data.end_time} onChange={(v) => updateFormData('end_time', v)} error={errors.end_time} />
           </div>
-          <p className="text-[10px] text-textSecondary mt-2">
+          <p className="text-xs text-textSecondary mt-2">
             Routines repeat automatically every week to protect your time.
           </p>
         </>
@@ -146,8 +140,8 @@ export default function AddItem() {
             <ArrowLeft size={20} className="text-white" />
           </button>
           <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-xl ${meta.bg} flex items-center justify-center`}>
-              <Icon size={16} className={meta.color} />
+            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+              <Plus size={16} className="text-white" />
             </div>
             <h1 className="text-lg font-display font-bold text-white">Add to Schedule</h1>
           </div>

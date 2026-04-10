@@ -83,7 +83,14 @@ export default function CalendarView() {
           {todaysItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="text-4xl text-gray-300 mb-4">📅</div>
-              <div className="text-sm text-gray-500 text-center">No events on this day. Tap + to add one.</div>
+              <div className="text-sm text-gray-500 text-center mb-3">No events on this day.</div>
+              <button
+                onClick={() => navigate(`/add?date=${selectedDateStr}`)}
+                className="px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-full hover:bg-primaryDark transition-colors shadow-blue flex items-center gap-1.5"
+              >
+                <Plus size={16} />
+                Add Item
+              </button>
             </div>
           ) : (
             <div>

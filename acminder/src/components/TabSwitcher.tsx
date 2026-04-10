@@ -12,7 +12,7 @@ export default function TabSwitcher({ tabs, activeTab, onTabChange }: TabSwitche
           key={tab}
           type="button"
           onClick={() => onTabChange(tab)}
-          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 outline-none ${
             activeTab === tab
               ? 'bg-primary text-white shadow-blue'
               : 'text-textSecondary hover:text-textPrimary'

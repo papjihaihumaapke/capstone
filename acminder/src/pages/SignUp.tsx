@@ -66,7 +66,7 @@ export default function SignUp() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          <p className="text-[11px] text-textSecondary">Must be at least 6 characters</p>
+          <p className="text-xs text-textSecondary">Must be at least 6 characters</p>
         </div>
 
         <div className="flex flex-col gap-3 mt-2">
@@ -100,7 +100,11 @@ export default function SignUp() {
           </button>
 
           {error && (
-            <div className="p-3 bg-red-50 text-danger text-xs font-medium rounded-xl text-center border border-red-100">
+            <div className={`p-3 text-xs font-medium rounded-xl text-center border ${
+              error.toLowerCase().includes('google') || error.toLowerCase().includes('too many')
+                ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                : 'bg-red-50 text-danger border-red-100'
+            }`}>
               {error}
             </div>
           )}

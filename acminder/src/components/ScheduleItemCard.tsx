@@ -35,7 +35,7 @@ function getItemSubtitle(item: ScheduleItem) {
   if (item.type === 'shift') return [item.role, item.location].filter(Boolean).join(' • ');
   if (item.type === 'class') return [item.course, item.location].filter(Boolean).join(' • ');
   if (item.type === 'assignment') return item.course || '';
-  if (item.type === 'routine') return (item as RoutineItem).category || 'Routine';
+  if (item.type === 'routine') return (item as RoutineItem).category || 'Habit';
   return (item as any).location || '';
 }
 
@@ -113,7 +113,7 @@ export default function ScheduleItemCard({ item, userId, conflictSeverity = 'non
             <CheckCircle2 size={14} className="text-success shrink-0" />
           )}
           {isRoutine && !markedDone && (
-            <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-bold rounded-md uppercase tracking-wider shrink-0">Routine</span>
+            <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-bold rounded-md uppercase tracking-wider shrink-0">Habit</span>
           )}
         </div>
         {subtitle && (

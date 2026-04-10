@@ -126,7 +126,11 @@ export default function Login() {
           </button>
 
           {error && (
-            <div className="p-3 bg-red-50 text-danger text-xs font-medium rounded-xl text-center border border-red-100">
+            <div className={`p-3 text-xs font-medium rounded-xl text-center border ${
+              error.toLowerCase().includes('google') 
+                ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                : 'bg-red-50 text-danger border-red-100'
+            }`}>
               {error}
             </div>
           )}

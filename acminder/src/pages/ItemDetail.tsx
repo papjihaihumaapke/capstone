@@ -25,8 +25,8 @@ function formatDateLabel(dateStr: string | undefined) {
 }
 
 const TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-  shift: { label: 'Work Shift', color: 'text-primary', bg: 'bg-primary/10', icon: Briefcase },
-  class: { label: 'Class', color: 'text-blue-600', bg: 'bg-blue-50', icon: BookOpen },
+  shift: { label: 'Work', color: 'text-primary', bg: 'bg-primary/10', icon: Briefcase },
+  class: { label: 'College', color: 'text-blue-600', bg: 'bg-blue-50', icon: BookOpen },
   assignment: { label: 'Task', color: 'text-warning', bg: 'bg-warning/10', icon: FileText },
   routine: { label: 'Habit', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: Clock },
 };
@@ -306,7 +306,7 @@ export default function ItemDetail() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">{(item.type === 'shift' || item.type === 'routine') ? 'Details' : 'Course'}</label>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">{(item.type === 'shift') ? 'Role' : (item.type === 'routine') ? 'Category' : 'Course'}</label>
                   <input
                     value={item.type === 'shift' ? (draft.role || '') : (draft.course || '')}
                     onChange={(e) => setDraft({...draft, [item.type === 'shift' ? 'role' : 'course']: e.target.value})}

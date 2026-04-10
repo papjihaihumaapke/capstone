@@ -15,6 +15,7 @@ function SlideGraphic({ index }: { index: number }) {
               { title: 'College', time: '9:00 – 11:00 AM', color: 'border-primary bg-primaryLight' },
               { title: 'Work', time: '12:00 – 4:00 PM', color: 'border-accent bg-accentLight' },
               { title: 'Tasks', time: 'Friday', color: 'border-warning bg-warning/5' },
+              { title: 'Habits', time: 'Daily · 7:00 AM', color: 'border-indigo-500 bg-indigo-50' },
             ].map(({ title, time, color }) => (
               <div key={title} className={`flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-card border-l-4 ${color}`}>
                 <div className="flex-1 min-w-0">
@@ -91,7 +92,7 @@ function SlideGraphic({ index }: { index: number }) {
 const SLIDES = [
   {
     title: 'Import Schedules',
-    desc: 'Upload your college timetable and work shifts by picking your exported .ics files.',
+    desc: 'Upload your college timetable, work shifts, tasks, and daily habits — or add them manually.',
     step: '01',
   },
   {
