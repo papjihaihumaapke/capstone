@@ -158,9 +158,9 @@ export default function Settings() {
           <div className="bg-white rounded-xl shadow-card border border-border overflow-hidden">
             <SettingRow
               icon={FileText}
-              label="Terms"
+              label="Terms & Privacy"
               right={<ChevronRight size={18} className="text-gray-400" />}
-              onClick={() => window.open('https://example.com/terms', '_blank')}
+              onClick={() => navigate('/terms')}
               borderBottom={false}
             />
           </div>

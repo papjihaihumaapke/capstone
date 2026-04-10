@@ -74,13 +74,13 @@ export default function BottomNav({ className = '' }: { className?: string }) {
         </div>
       </button>
 
-      {/* Profile (→ Settings for now) */}
-      <Link to="/settings" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor(false)} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      {/* Profile */}
+      <Link to="/profile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor(p.startsWith('/profile'))} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="8" r="4"/>
           <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
         </svg>
-        <span style={{ fontSize: 10, fontWeight: 500, color: labelColor(false) }}>Profile</span>
+        <span style={{ fontSize: 10, fontWeight: 500, color: labelColor(p.startsWith('/profile')) }}>Profile</span>
       </Link>
 
       {/* Settings */}

@@ -3,6 +3,7 @@ import type { ScheduleItem, Conflict, User } from '../types';
 import { supabase } from '../lib/supabase';
 import { getItems, addItem as addItemApi, updateItem as updateItemApi, deleteItem as deleteItemApi, ensureProfileExists } from '../lib/supabase';
 import { calculateConflicts } from '../lib/conflictEngine';
+import { saveProviderToken } from '../hooks/useGoogleCalendar';
 
 function getResolvedKey(userId: string) {
   return `acminder_resolved_conflicts_${userId}`;
@@ -181,6 +182,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       const u = session?.user;
+      // Persist provider_token immediately — it's only available right after OAuth
+      if (session?.provider_token) saveProviderToken(session.provider_token);
       setUser(u ? { id: u.id, email: u.email || '', name: '' } : null);
       checkProfile(u);
     });

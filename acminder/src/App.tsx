@@ -15,6 +15,8 @@ import AddItem from './pages/AddItem';
 import ItemDetail from './pages/ItemDetail';
 import ConflictDetail from './pages/ConflictDetail';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
+import Terms from './pages/Terms';
 
 export default function App() {
   return (
@@ -39,6 +41,8 @@ export default function App() {
             <Route path="/item/:id" element={<ItemDetail />} />
             <Route path="/conflict/:id" element={<ConflictDetail />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/terms" element={<Terms />} />
           </Route>
         </Route>
 
