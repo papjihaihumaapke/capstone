@@ -18,9 +18,7 @@ const FILTERS: { key: FC; label: string }[] = [
   { key: 'routine', label: 'Habits' },
 ];
 
-// Days that have events — used for dot colouring.
-// We mark days relative to today: -2 … +4
-function buildDayStrip(items: any[], selStr: string) {
+function buildDayStrip() {
   const today = new Date();
   return Array.from({ length: 7 }, (_, i) => addDays(today, i - 2));
 }
@@ -34,8 +32,8 @@ export default function Home() {
   const [showNotifications, setShowNotifications] = useState(false);
   const { sync } = useGoogleCalendar();
 
-  // Auto-sync Google Calendar on load
-  useEffect(() => { sync(); }, []);
+  // Auto-sync Google Calendar silently on load (1-hour cooldown, no toast spam)
+  useEffect(() => { sync({ silent: true }); }, []);
 
   const selStr = format(selDate, 'yyyy-MM-dd');
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -173,7 +171,6 @@ export default function Home() {
             {days.map(day => {
               const ds = format(day, 'yyyy-MM-dd');
               const isActive = isSameDay(day, selDate);
-              const isT = isToday(day);
               const hasEvents = daysWithEvents.has(ds);
 
               return (

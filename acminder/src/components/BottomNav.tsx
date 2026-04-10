@@ -1,9 +1,8 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 
 export default function BottomNav({ className = '' }: { className?: string }) {
   const location = useLocation();
-  const nav = useNavigate();
   const { user } = useAppContext();
   const p = location.pathname;
   if (!user) return null;
@@ -48,31 +47,6 @@ export default function BottomNav({ className = '' }: { className?: string }) {
         </svg>
         <span style={{ fontSize: 10, fontWeight: 500, color: labelColor(p.startsWith('/calendar')) }}>Calendar</span>
       </Link>
-
-      {/* Centre Add button — lifted above bar */}
-      <button
-        type="button"
-        onClick={() => nav('/add')}
-        aria-label="Add item"
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 16,
-          background: '#0D0D0D',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginTop: -18,
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ position: 'relative', width: 16, height: 16 }}>
-          <div style={{ position: 'absolute', top: '50%', left: 0, width: 16, height: 2, background: '#fff', borderRadius: 2, transform: 'translateY(-50%)' }} />
-          <div style={{ position: 'absolute', left: '50%', top: 0, width: 2, height: 16, background: '#fff', borderRadius: 2, transform: 'translateX(-50%)' }} />
-        </div>
-      </button>
 
       {/* Profile */}
       <Link to="/profile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none' }}>

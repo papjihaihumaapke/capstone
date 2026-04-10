@@ -5,13 +5,13 @@ import { fetchGoogleEvents, mapGoogleEventToItem } from '../lib/googleSync';
 import { addItems } from '../lib/supabase';
 
 const PROVIDER_TOKEN_KEY = 'acminder_google_provider_token';
+const LAST_SYNC_KEY = 'acminder_google_last_sync';
+const SYNC_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 
-/** Persist the provider_token right after OAuth so it survives page reloads. */
 export function saveProviderToken(token: string) {
   try { localStorage.setItem(PROVIDER_TOKEN_KEY, token); } catch {}
 }
 
-/** Retrieve a stored provider_token (falls back to session token). */
 export function loadProviderToken(): string | null {
   try { return localStorage.getItem(PROVIDER_TOKEN_KEY); } catch { return null; }
 }
@@ -20,29 +20,43 @@ export function clearProviderToken() {
   try { localStorage.removeItem(PROVIDER_TOKEN_KEY); } catch {}
 }
 
+function getLastSyncTime(): number {
+  try { return parseInt(localStorage.getItem(LAST_SYNC_KEY) || '0', 10); } catch { return 0; }
+}
+
+function setLastSyncTime() {
+  try { localStorage.setItem(LAST_SYNC_KEY, Date.now().toString()); } catch {}
+}
+
 export function useGoogleCalendar() {
   const [syncing, setSyncing] = useState(false);
   const ctx = useContext(AppContext);
   const { user, showToast, fetchItems, detectConflicts } = ctx || {};
 
-  const sync = async () => {
+  /**
+   * @param silent - if true, suppresses "no new events" toasts (used for auto-sync on page load)
+   */
+  const sync = async ({ silent = false }: { silent?: boolean } = {}) => {
     if (!user || !showToast) return;
+
+    // Cooldown: skip auto-syncs that are within 1 hour of the last sync
+    if (silent) {
+      const elapsed = Date.now() - getLastSyncTime();
+      if (elapsed < SYNC_COOLDOWN_MS) return;
+    }
 
     try {
       setSyncing(true);
 
-      // 1. Try to get a fresh token from the current session first
       const { data: { session } } = await supabase.auth.getSession();
       const freshToken = session?.provider_token;
-
-      // If we just got a fresh one from OAuth, persist it
       if (freshToken) saveProviderToken(freshToken);
 
-      // 2. Fall back to the cached token
       const providerToken = freshToken || loadProviderToken();
 
       if (!providerToken) {
-        showToast('Connect your Google account in Settings to sync your calendar.');
+        // Only notify the user if they manually triggered the sync
+        if (!silent) showToast('Connect your Google account in Settings to sync your calendar.');
         return;
       }
 
@@ -50,23 +64,25 @@ export function useGoogleCalendar() {
       const itemsToAdd = events.map(e => mapGoogleEventToItem(e, user.id));
 
       if (itemsToAdd.length > 0) {
-        await addItems(itemsToAdd as any);
+        const added = await addItems(itemsToAdd as any);
         await fetchItems?.();
         detectConflicts?.();
-        showToast(`Synced ${itemsToAdd.length} events from Google Calendar!`);
+        setLastSyncTime();
+        // Only toast if explicitly triggered by the user, not on background auto-sync
+        if (!silent) showToast(`Synced ${added.length} events from Google Calendar!`);
       } else {
-        showToast('No new events found in Google Calendar.');
+        setLastSyncTime();
+        // Silently succeed when there are no events — don't nag the user
+        if (!silent) showToast('Google Calendar is up to date.');
       }
     } catch (error: any) {
       console.error('Sync failed:', error);
-
-      // If the token is stale (401/403), clear cache so we don't keep retrying with it
       const msg: string = error?.message || '';
       if (msg.includes('403') || msg.includes('401') || msg.includes('Forbidden') || msg.includes('Unauthorized')) {
         clearProviderToken();
-        showToast('Google Calendar access expired. Please reconnect in Settings.');
+        if (!silent) showToast('Google Calendar access expired. Please reconnect in Settings.');
       } else {
-        showToast('Calendar sync failed. Please try again.');
+        if (!silent) showToast('Calendar sync failed. Please try again.');
       }
     } finally {
       setSyncing(false);
