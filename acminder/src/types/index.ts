@@ -1,10 +1,11 @@
-export type ScheduleItemType = 'shift' | 'class' | 'assignment';
+export type ScheduleItemType = 'shift' | 'class' | 'assignment' | 'routine';
 
 export interface BaseScheduleItem {
   id: string;
   user_id: string;
   title: string;
   created_at?: string;
+  completed?: boolean;
 }
 
 export interface ShiftItem extends BaseScheduleItem {
@@ -35,10 +36,18 @@ export interface AssignmentItem extends BaseScheduleItem {
   start_time?: string; // Legacy fallback
   end_time?: string; // Legacy fallback
   course?: string;
-  completed?: boolean;
 }
 
-export type ScheduleItem = ShiftItem | ClassItem | AssignmentItem;
+export interface RoutineItem extends BaseScheduleItem {
+  type: 'routine';
+  date: string; // The date it was first added or just a baseline date
+  start_time: string;
+  end_time: string;
+  repeats_weekly: boolean;
+  category?: 'sleep' | 'gym' | 'meal' | 'study' | 'other';
+}
+
+export type ScheduleItem = ShiftItem | ClassItem | AssignmentItem | RoutineItem;
 
 export interface Conflict {
   id: string;

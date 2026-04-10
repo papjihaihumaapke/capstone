@@ -4,6 +4,10 @@ import type { ScheduleItem } from '../types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Supabase URL and anon key must be set in environment variables.');
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Typed helper functions
@@ -50,7 +54,12 @@ export const addItem = async (item: Omit<ScheduleItem, 'id' | 'created_at'>): Pr
 
 export const addItems = async (items: Array<Omit<ScheduleItem, 'id' | 'created_at'>>): Promise<ScheduleItem[]> => {
   if (items.length === 0) return [];
-  const { data, error } = await supabase.from('schedule_items').insert(items).select('*');
+  // Use upsert to handle items synced from external calendars by their external_id
+  const { data, error } = await supabase
+    .from('schedule_items')
+    .upsert(items, { onConflict: 'external_id', ignoreDuplicates: false })
+    .select('*');
+    
   if (error) throw error;
   return data || [];
 };

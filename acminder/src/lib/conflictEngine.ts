@@ -1,12 +1,10 @@
 import { format, addWeeks, startOfDay } from 'date-fns';
-import type { ScheduleItem, Conflict, ShiftItem, ClassItem, AssignmentItem } from '../types';
+import type { ScheduleItem, Conflict, ShiftItem, ClassItem, AssignmentItem, RoutineItem } from '../types';
 
 /**
  * Normalizes an incoming date string to strictly 'YYYY-MM-DD'.
- * Throws a descriptive Error if the date is malformed or invalid.
  */
 export function normalizeDate(dateStr: string): string {
-  // Accept 1- or 2-digit month/day (e.g. "2024-1-5" and "2024-01-05" are the same date)
   const match = dateStr.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (!match) throw new Error(`Invalid date format for ${dateStr}. Expected YYYY-MM-DD.`);
   const month = String(Number(match[2])).padStart(2, '0');
@@ -18,7 +16,7 @@ export function normalizeDate(dateStr: string): string {
 }
 
 /**
- * Validates 'HH:MM' time string and rejects out of bounds values.
+ * Validates 'HH:MM' time string.
  */
 export function validateTime(timeStr: string): string {
   const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})/);
@@ -45,9 +43,12 @@ export function isClass(item: ScheduleItem): item is ClassItem {
 export function isAssignment(item: ScheduleItem): item is AssignmentItem {
   return item.type === 'assignment';
 }
+export function isRoutine(item: ScheduleItem): item is RoutineItem {
+  return item.type === 'routine';
+}
 
 /**
- * Parses and strictly validates a raw object against the ScheduleItem discriminated union.
+ * Validates a raw object against the ScheduleItem discriminated union.
  */
 export function validateScheduleItem(raw: any): ScheduleItem {
   if (!raw || typeof raw !== 'object') throw new Error('ScheduleItem must be an object');
@@ -92,6 +93,19 @@ export function validateScheduleItem(raw: any): ScheduleItem {
     } as AssignmentItem;
   }
 
+  if (raw.type === 'routine') {
+    if (typeof raw.date !== 'string') throw new Error('Routine requires a baseline date');
+    if (typeof raw.start_time !== 'string' || typeof raw.end_time !== 'string') throw new Error('Routine requires start_time and end_time');
+    return {
+      ...raw,
+      type: 'routine',
+      date: normalizeDate(raw.date),
+      start_time: validateTime(raw.start_time),
+      end_time: validateTime(raw.end_time),
+      repeats_weekly: true
+    } as RoutineItem;
+  }
+
   throw new Error(`Unknown ScheduleItem type: ${raw.type}`);
 }
 
@@ -102,7 +116,7 @@ type Interval = {
   dateStr: string;
 };
 
-export function expandRecurringDates(item: ClassItem | ShiftItem, windowWeeks = 8): string[] {
+export function expandRecurringDates(item: ClassItem | ShiftItem | RoutineItem, windowWeeks = 8): string[] {
   const baseDateStr = normalizeDate(item.date);
   if (!item.repeats_weekly) return [baseDateStr];
 
@@ -114,9 +128,6 @@ export function expandRecurringDates(item: ClassItem | ShiftItem, windowWeeks = 
   const todayMs = today.getTime();
   const maxMs = maxDate.getTime();
 
-  // Jump directly to the first occurrence on or after today — avoids looping through
-  // potentially years of past weeks when the base date is far in the past (bug: phantom
-  // conflicts with old items on the same weekday from a previous year).
   let currentMs = baseMs;
   if (currentMs < todayMs) {
     const weeksToSkip = Math.ceil((todayMs - currentMs) / msPerWeek);
@@ -132,7 +143,6 @@ export function expandRecurringDates(item: ClassItem | ShiftItem, windowWeeks = 
 }
 
 function getIntervals(item: ScheduleItem): Interval[] {
-  // Only detect conflicts for today and future dates — past events already happened.
   const todayStr = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
   if (isAssignment(item)) {
@@ -145,18 +155,15 @@ function getIntervals(item: ScheduleItem): Interval[] {
     return [{ item, startMinutes, endMinutes: startMinutes, dateStr }];
   }
 
-  if (isShift(item) || isClass(item)) {
+  if (isShift(item) || isClass(item) || isRoutine(item)) {
     let startMinutes = timeToMinutes(item.start_time);
     let endMinutes = timeToMinutes(item.end_time);
 
-    // Handle overnight shifts crossing midnight
     if (endMinutes < startMinutes) {
-      endMinutes += 1440;
+      endMinutes += 1440; // Overnight
     }
 
     const dates = expandRecurringDates(item as any);
-    // expandRecurringDates already skips to today for recurring items; this filter
-    // also covers non-recurring items whose single date is in the past.
     return dates
       .filter(d => d >= todayStr)
       .map(d => ({ item, startMinutes, endMinutes, dateStr: d }));
@@ -166,84 +173,90 @@ function getIntervals(item: ScheduleItem): Interval[] {
 }
 
 export function intervalsOverlap(a: Interval, b: Interval): { severity: 'none' | 'minor' | 'critical'; start?: number; end?: number } {
-   if (a.dateStr !== b.dateStr) return { severity: 'none' }; 
+   const getAbs = (iv: Interval) => {
+      const d = new Date(iv.dateStr + 'T00:00:00').getTime() / 60000;
+      return { start: d + iv.startMinutes, end: d + iv.endMinutes };
+   };
+
+   const absA = getAbs(a);
+   const absB = getAbs(b);
    
    if (a.startMinutes === a.endMinutes || b.startMinutes === b.endMinutes) {
-      const pt = a.startMinutes === a.endMinutes ? a : b;
-      const iv = a.startMinutes === a.endMinutes ? b : a;
+      const pt = a.startMinutes === a.endMinutes ? absA : absB;
+      const iv = a.startMinutes === a.endMinutes ? absB : absA;
       
-      if (iv.startMinutes === iv.endMinutes) {
-        if (pt.startMinutes === iv.startMinutes) return { severity: 'critical', start: pt.startMinutes, end: pt.startMinutes };
-        const gap = Math.abs(pt.startMinutes - iv.startMinutes);
-        if (gap > 0 && gap <= 60) return { severity: 'minor', start: Math.min(pt.startMinutes, iv.startMinutes), end: Math.max(pt.startMinutes, iv.startMinutes) };
+      if (iv.start === iv.end) {
+        if (pt.start === iv.start) return { severity: 'critical', start: a.startMinutes, end: a.startMinutes };
+        const gap = Math.abs(pt.start - iv.start);
+        if (gap > 0 && gap <= 60) return { severity: 'minor', start: Math.min(a.startMinutes, b.startMinutes), end: Math.max(a.startMinutes, b.startMinutes) };
         return { severity: 'none' };
       }
       
-      if (pt.startMinutes >= iv.startMinutes && pt.startMinutes <= iv.endMinutes) {
-        return { severity: 'critical', start: pt.startMinutes, end: pt.startMinutes };
+      if (pt.start >= iv.start && pt.start <= iv.end) {
+        return { severity: 'critical', start: a.startMinutes, end: a.startMinutes };
       }
-      const gap = Math.min(Math.abs(pt.startMinutes - iv.startMinutes), Math.abs(pt.startMinutes - iv.endMinutes));
+      const gap = Math.min(Math.abs(pt.start - iv.start), Math.abs(pt.start - iv.end));
       if (gap > 0 && gap <= 60) {
-        if (pt.startMinutes < iv.startMinutes) return { severity: 'minor', start: pt.startMinutes, end: iv.startMinutes };
-        return { severity: 'minor', start: iv.endMinutes, end: pt.startMinutes };
+        return { severity: 'minor', start: a.startMinutes, end: a.startMinutes };
       }
       return { severity: 'none' };
    }
    
-   const maxStart = Math.max(a.startMinutes, b.startMinutes);
-   const minEnd = Math.min(a.endMinutes, b.endMinutes);
+   const maxStart = Math.max(absA.start, absB.start);
+   const minEnd = Math.min(absA.end, absB.end);
    
    if (maxStart < minEnd) {
-     return { severity: 'critical', start: maxStart, end: minEnd };
+     return { severity: 'critical', start: maxStart % 1440, end: minEnd % 1440 };
    }
    
-   const gap = Math.max(a.startMinutes - b.endMinutes, b.startMinutes - a.endMinutes);
+   const gap = Math.max(absA.start - absB.end, absB.start - absA.end);
    if (gap >= 0 && gap <= 60) {
-      if (a.startMinutes > b.endMinutes) return { severity: 'minor', start: b.endMinutes, end: a.startMinutes };
-      return { severity: 'minor', start: a.endMinutes, end: b.startMinutes };
+      return { severity: 'minor' };
    }
    
    return { severity: 'none' };
 }
 
 function minsToTimeStr(mins: number): string {
-  const h = Math.floor(mins / 60);
+  const h = Math.floor((mins % 1440) / 60);
   const m = mins % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-/**
- * Robust conflict engine entrypoint. 
- * Converts items to unified intervals (expanding recurrences and handling overnights),
- * then compares mathematically, deduplicating collisions.
- */
 export function calculateConflicts(items: ScheduleItem[]): Conflict[] {
    const flatIntervals: Interval[] = [];
    const dedupeMap = new Map<string, Conflict>();
 
    for (const raw of items) {
       try {
+        if ((raw as any).completed) continue;
         const item = validateScheduleItem(raw);
         flatIntervals.push(...getIntervals(item));
-      } catch (e) {
-        // Silently skip corrupted legacy items in the DB
-      }
+      } catch (e) { /* ignore */ }
    }
+
+   flatIntervals.sort((a, b) => {
+     const dDiff = a.dateStr.localeCompare(b.dateStr);
+     if (dDiff !== 0) return dDiff;
+     return a.startMinutes - b.startMinutes;
+   });
    
    for (let i = 0; i < flatIntervals.length; i++) {
      for (let j = i + 1; j < flatIntervals.length; j++) {
        const invA = flatIntervals[i];
        const invB = flatIntervals[j];
-       
        if (invA.item.id === invB.item.id) continue;
        
        const { severity, start, end } = intervalsOverlap(invA, invB);
-       if (severity === 'none') continue;
+       if (severity === 'none') {
+          const d1 = new Date(invA.dateStr + 'T00:00:00').getTime();
+          const d2 = new Date(invB.dateStr + 'T00:00:00').getTime();
+          if (d2 - d1 > 172800000) break;
+          continue;
+       }
        
        const idPair = [invA.item.id, invB.item.id].sort().join('|') + '|' + invA.dateStr;
-       
        const existing = dedupeMap.get(idPair);
-       // Overwrite if new severity is critical over a previous minor
        if (!existing || (existing.severity === 'minor' && severity === 'critical')) {
            dedupeMap.set(idPair, {
                id: idPair,
@@ -258,7 +271,6 @@ export function calculateConflicts(items: ScheduleItem[]): Conflict[] {
        }
      }
    }
-   
    return Array.from(dedupeMap.values());
 }
 
@@ -267,7 +279,7 @@ export function itemOccursOnDate(item: ScheduleItem, targetDateStr: string) {
     const d = item.due_date || item.date;
     return d === targetDateStr;
   }
-  if (item.type === 'class' && item.repeats_weekly) {
+  if ((item.type === 'class' || item.type === 'shift' || item.type === 'routine') && item.repeats_weekly) {
     if (targetDateStr < item.date) return false;
     const targetDay = new Date(targetDateStr + 'T00:00:00').getDay();
     const itemDay = new Date(item.date + 'T00:00:00').getDay();

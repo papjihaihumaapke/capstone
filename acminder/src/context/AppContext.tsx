@@ -1,21 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ScheduleItem, Conflict, User } from '../types';
 import { supabase } from '../lib/supabase';
-import { getItems, addItem as addItemApi, updateItem as updateItemApi, deleteItem as deleteItemApi } from '../lib/supabase';
+import { getItems, addItem as addItemApi, updateItem as updateItemApi, deleteItem as deleteItemApi, ensureProfileExists } from '../lib/supabase';
 import { calculateConflicts } from '../lib/conflictEngine';
 
-const RESOLVED_KEY = 'acminder_resolved_conflicts';
+function getResolvedKey(userId: string) {
+  return `acminder_resolved_conflicts_${userId}`;
+}
 
-function loadResolvedIds(): Set<string> {
+function loadResolvedIds(userId: string): Set<string> {
   try {
-    const stored = localStorage.getItem(RESOLVED_KEY);
+    const stored = localStorage.getItem(getResolvedKey(userId));
     if (stored) return new Set(JSON.parse(stored));
   } catch (e) { /* ignore */ }
   return new Set();
 }
 
-function saveResolvedIds(ids: Set<string>) {
-  localStorage.setItem(RESOLVED_KEY, JSON.stringify([...ids]));
+function saveResolvedIds(userId: string, ids: Set<string>) {
+  localStorage.setItem(getResolvedKey(userId), JSON.stringify([...ids]));
 }
 
 interface AppContextType {
@@ -37,6 +39,8 @@ interface AppContextType {
   importedSources: Set<string>;
   setImportedSources: React.Dispatch<React.SetStateAction<Set<string>>>;
   logout: () => void;
+  isNewUser: boolean;
+  clearNewUser: () => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -48,6 +52,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState<boolean>(true);
   const [toast, setToast] = useState<{ message: string; visible: boolean } | null>(null);
   const [importedSources, setImportedSources] = useState<Set<string>>(new Set());
+  const [isNewUser, setIsNewUser] = useState(false);
+  const clearNewUser = () => setIsNewUser(false);
 
   const fetchItems = async () => {
     if (!user?.id) return undefined;
@@ -73,10 +79,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateItem = async (id: string, updates: Partial<ScheduleItem>) => {
     try {
+      // Optimistic update for immediate UI feedback
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } as ScheduleItem : item)));
       await updateItemApi(id, updates);
       await fetchItems();
     } catch (error) {
       console.error('Failed to update item:', error);
+      // Revert optimistic update on failure
+      await fetchItems();
     }
   };
 
@@ -90,12 +100,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const detectConflicts = () => {
-    // Reads items from the current closure — safe when called from useEffect([items])
-    // or from places where items is already up-to-date.
-    const resolvedIds = loadResolvedIds();
-    const newConflicts = calculateConflicts(items).map((c) => ({
+    if (!user?.id) return;
+    
+    // 1. Calculate the current state of the world
+    const calculated = calculateConflicts(items);
+    
+    // 2. Load what the user has previously resolved
+    const resolvedIdsSet = loadResolvedIds(user.id);
+    
+    // 3. Garbage Collection: Remove resolved IDs that are no longer possible 
+    // (i.e., one of the items was deleted or the conflict no longer exists)
+    const activeConflictIds = new Set(calculated.map(c => c.id));
+    let hasChanged = false;
+    for (const id of resolvedIdsSet) {
+      if (!activeConflictIds.has(id)) {
+        resolvedIdsSet.delete(id);
+        hasChanged = true;
+      }
+    }
+    if (hasChanged) saveResolvedIds(user.id, resolvedIdsSet);
+
+    // 4. Update the state with current resolution status
+    const newConflicts = calculated.map((c) => ({
       ...c,
-      resolved: resolvedIds.has(c.id),
+      resolved: resolvedIdsSet.has(c.id),
     }));
     setConflicts(newConflicts);
   };
@@ -106,9 +134,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resolveConflict = (id: string) => {
     // Persist to localStorage so resolved state survives page refresh
-    const resolvedIds = loadResolvedIds();
+    if (!user?.id) return;
+    const resolvedIds = loadResolvedIds(user.id);
     resolvedIds.add(id);
-    saveResolvedIds(resolvedIds);
+    saveResolvedIds(user.id, resolvedIds);
     updateConflict(id, { resolved: true });
   };
 
@@ -128,19 +157,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [items]);
 
   useEffect(() => {
-    const ensureProfile = async (sessionUser: any) => {
+    const checkProfile = (sessionUser: any) => {
       if (!sessionUser?.id) return;
-      await supabase.from('profiles').upsert({ id: sessionUser.id, email: sessionUser.email || '', name: '' });
+      // Fire-and-forget: don't block the auth state change callback
+      ensureProfileExists(sessionUser.id, sessionUser.email || '')
+        .then((isNew) => { if (isNew) setIsNewUser(true); })
+        .catch((err) => console.error('Failed to ensure profile exists:', err));
     };
 
-    supabase.auth.getSession().then(async ({ data: { session } }: any) => {
-      await ensureProfile(session?.user);
-      setUser(session?.user ? { id: session.user.id, email: session.user.email || '', name: '' } : null);
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
+      const u = session?.user;
+      setUser(u ? { id: u.id, email: u.email || '', name: '' } : null);
+      checkProfile(u);
+    }).catch(() => {
+      setUser(null);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      ensureProfile(session?.user);
-      setUser(session?.user ? { id: session.user.id, email: session.user.email || '', name: '' } : null);
+      const u = session?.user;
+      setUser(u ? { id: u.id, email: u.email || '', name: '' } : null);
+      checkProfile(u);
     });
 
     return () => subscription.unsubscribe();
@@ -164,6 +200,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast, showToast, hideToast,
         importedSources, setImportedSources,
         logout,
+        isNewUser, clearNewUser,
       }}
     >
       {children}

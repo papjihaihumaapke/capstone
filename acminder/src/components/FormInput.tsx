@@ -14,25 +14,20 @@ export default function FormInput({ label, placeholder, type = 'text', value, on
   const inputId = id || label.toLowerCase().replace(/\s+/g, '-');
   return (
     <div className="mb-4">
-      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      <label htmlFor={inputId} className="block text-xs font-bold text-textSecondary uppercase tracking-wide mb-1.5">{label}</label>
       <div className="relative">
         <input
           id={inputId}
           type={type}
           placeholder={placeholder}
           value={value}
-          onClick={(e) => {
-            if (type === 'date' || type === 'time') {
-              try { (e.target as HTMLInputElement).showPicker(); } catch (err) {}
-            }
-          }}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F07B5A] bg-white transition-shadow outline-none text-gray-800 ${error ? 'border-red-500' : 'border-gray-200'} ${type === 'date' || type === 'time' ? 'custom-datetime-input' : ''}`}
+          className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface transition-all outline-none text-textPrimary text-sm placeholder:text-textSecondary/50 ${error ? 'border-danger bg-red-50/50' : 'border-border focus:border-primary'} ${type === 'date' || type === 'time' ? 'custom-datetime-input' : ''}`}
         />
-        {type === 'date' && <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />}
-        {type === 'time' && <Clock className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />}
+        {type === 'date' && <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary pointer-events-none" size={17} />}
+        {type === 'time' && <Clock className="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary pointer-events-none" size={17} />}
       </div>
-      {error && <p className="text-red-500 text-xs mt-1.5 font-medium">{error}</p>}
+      {error && <p className="text-danger text-xs mt-1 font-medium">{error}</p>}
     </div>
   );
 }

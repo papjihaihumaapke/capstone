@@ -1,54 +1,42 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Calendar as CalendarIcon, Briefcase, CalendarDays, Check } from 'lucide-react';
+import { ChevronLeft, Upload, FileUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { useEffect, useState } from 'react';
+import { useState, useRef } from 'react';
 import { parseIcs, toDateString, toTimeString } from '../lib/ics';
 import { addItems } from '../lib/supabase';
-
-const SOURCES = [
-  { id: 'college', title: 'College Timetable', desc: 'Import your class calendar', icon: CalendarIcon, color: 'bg-blue-50 text-blue-600', comingSoon: false },
-  { id: 'work', title: 'Work Shift Schedule', desc: 'Sync your work shifts', icon: Briefcase, color: 'bg-green-50 text-green-600', comingSoon: false },
-  { id: 'external', title: 'Google/Apple Calendar', desc: 'Connect external calendars', icon: CalendarDays, color: 'bg-orange-50 text-orange-600', comingSoon: true }
-];
+import { calculateConflicts } from '../lib/conflictEngine';
 
 export default function ImportSchedule() {
   const navigate = useNavigate();
-  const { importedSources, setImportedSources, user, showToast, fetchItems } = useAppContext();
-  const [collegeFile, setCollegeFile] = useState<File | null>(null);
-  const [workFile, setWorkFile] = useState<File | null>(null);
+  const { user, showToast, fetchItems } = useAppContext();
+  const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importCount, setImportCount] = useState(0);
+  const [importedCount, setImportedCount] = useState<number | null>(null);
+  const [postImportConflicts, setPostImportConflicts] = useState(0);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (importCount > 0 && importCount >= importedSources.size) {
-      navigate('/home');
-    }
-  }, [importCount, importedSources.size, navigate]);
-
-  const toggleSource = (id: string) => {
-    const source = SOURCES.find(s => s.id === id);
-    if (source?.comingSoon) return;
-    setImportedSources(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const inferEventType = (summary: string): 'class' | 'shift' | 'assignment' => {
+    const lower = summary.toLowerCase();
+    if (/\b(class|lecture|lab|tutorial|seminar|course)\b/.test(lower)) return 'class';
+    if (/\b(shift|work|job|store|warehouse)\b/.test(lower)) return 'shift';
+    return 'assignment';
   };
 
-  const importCollegeIcs = async () => {
+  const handleImport = async () => {
     if (!user?.id) return;
-    if (!collegeFile) {
-      showToast?.('Upload a .ics file to import.');
+    if (!file) {
+      showToast?.('Please select a .ics file first.');
       return;
     }
     setImporting(true);
     try {
-      const text = await collegeFile.text();
+      const text = await file.text();
       const events = parseIcs(text).filter(e => e.dtStart && e.dtEnd && e.summary);
+
       const items = events.map((e) => ({
         user_id: user.id,
-        type: 'class' as const,
+        type: inferEventType(e.summary),
         title: e.summary,
         date: toDateString(e.dtStart!),
         start_time: toTimeString(e.dtStart!),
@@ -57,188 +45,227 @@ export default function ImportSchedule() {
         repeats_weekly: false,
       }));
 
-      // Deduplicate against existing user items by exact match
-      const existingItemsResponse = (await fetchItems?.()) || [];
+      // Deduplicate against existing items
+      const existingItems = (await fetchItems?.()) || [];
       const newItems = items.filter(newItem => {
-        return !existingItemsResponse.some((existing: any) => 
-          existing.type === 'class' && 
-          existing.title === newItem.title && 
-          existing.date === newItem.date && 
+        return !existingItems.some((existing: any) =>
+          existing.title === newItem.title &&
+          existing.date === newItem.date &&
           existing.start_time === newItem.start_time
         );
       });
 
       if (newItems.length > 0) {
         const inserted = await addItems(newItems as any);
-        showToast?.(`Imported ${inserted.length} new class events.`);
+        showToast?.(`Imported ${inserted.length} new events.`);
+        setImportedCount(inserted.length);
       } else {
-        showToast?.('No new classes to import. All events are already in your schedule.');
+        showToast?.('No new events to import — all events already exist.');
+        setImportedCount(0);
       }
+
       await fetchItems?.();
-      setImportCount(prev => prev + 1);
-      
-      // Removed automatic navigation
+
+      // Check for conflicts
+      const latestItems = await fetchItems?.();
+      if (latestItems && latestItems.length > 0) {
+        const detected = calculateConflicts(latestItems);
+        setPostImportConflicts(detected.length);
+      }
     } catch (err: any) {
-      const msg = err?.message || err?.details || 'Failed to import college calendar.';
+      const msg = err?.message || 'Failed to import calendar file.';
       showToast?.(msg);
     } finally {
       setImporting(false);
     }
   };
 
-  const importWorkIcs = async () => {
-    if (!user?.id) return;
-    if (!workFile) {
-      showToast?.('Upload a .ics file to import work shifts.');
-      return;
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
     }
-    setImporting(true);
-    try {
-      const text = await workFile.text();
-      const events = parseIcs(text).filter(e => e.dtStart && e.dtEnd && e.summary);
-      const items = events.map((e) => ({
-        user_id: user.id,
-        type: 'shift' as const,
-        title: e.summary,
-        date: toDateString(e.dtStart!),
-        start_time: toTimeString(e.dtStart!),
-        end_time: toTimeString(e.dtEnd!),
-        location: e.location || '',
-        role: '',
-        repeats_weekly: false,
-      }));
+  };
 
-      // Deduplicate against existing user items by exact match
-      const existingItemsResponse = (await fetchItems?.()) || [];
-      const newItems = items.filter(newItem => {
-        return !existingItemsResponse.some((existing: any) => 
-          existing.type === 'shift' && 
-          existing.title === newItem.title && 
-          existing.date === newItem.date && 
-          existing.start_time === newItem.start_time
-        );
-      });
-
-      if (newItems.length > 0) {
-        const inserted = await addItems(newItems as any);
-        showToast?.(`Imported ${inserted.length} new work shift events.`);
-      } else {
-        showToast?.('No new shifts to import. All events are already in your schedule.');
-      }
-      await fetchItems?.();
-      setImportCount(prev => prev + 1);
-      
-      // Removed automatic navigation
-    } catch (err: any) {
-      const msg = err?.message || err?.details || 'Failed to import work calendar.';
-      showToast?.(msg);
-    } finally {
-      setImporting(false);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files?.[0]) {
+      setFile(e.dataTransfer.files[0]);
     }
   };
 
   return (
-    <div className="min-h-dvh flex flex-col bg-background w-full max-w-[390px] mx-auto relative shadow-sm">
-      {/* Header */}
-      <div className="px-4 pt-10 pb-6 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-black/5 active:scale-95 transition-all text-textSecondary">
-          <ChevronLeft size={24} />
-        </button>
-        <h1 className="text-xl font-display font-semibold text-textPrimary">
-          Import <span className="text-primary">Your Schedule</span>
-        </h1>
-      </div>
-
-      <main className="flex-1 px-6 pb-24 overflow-y-auto">
-        <p className="text-[15px] font-body text-textSecondary mb-8 leading-relaxed">
-          Connect your sources to detect conflicts between work, classes and deadlines.
-        </p>
-
-        <div className="flex flex-col gap-3">
-          {SOURCES.map(({ id, title, desc, icon: Icon, color, comingSoon }) => {
-            const isChecked = importedSources.has(id);
-            return (
-              <button
-                key={id}
-                onClick={() => toggleSource(id)}
-                disabled={comingSoon}
-                className={`w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm border border-gray-100 mb-3 transition-transform text-left ${comingSoon ? 'opacity-60 cursor-not-allowed' : 'active:scale-[0.98] cursor-pointer'}`}
-              >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
-                  <Icon size={24} />
-                </div>
-                
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-display font-semibold text-base text-textPrimary leading-tight">{title}</h3>
-                    {comingSoon && (
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-full uppercase tracking-wide">
-                        Coming Soon
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-body text-sm text-textSecondary mt-1">{desc}</p>
-                </div>
-
-                {!comingSoon && (
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shrink-0 ${isChecked ? 'bg-primary border-primary' : 'border-gray-300'}`}>
-                    {isChecked && <Check size={14} className="text-white" strokeWidth={3} />}
-                  </div>
-                )}
-              </button>
-            );
-          })}
+    <div className="min-h-dvh flex flex-col bg-background">
+      <div className="max-w-lg lg:max-w-xl mx-auto w-full flex flex-col flex-1 px-4 lg:px-0">
+        {/* Header */}
+        <div className="pt-10 pb-6 flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-black/5 active:scale-95 transition-all text-textSecondary">
+            <ChevronLeft size={24} />
+          </button>
+          <h1 className="text-xl font-display font-semibold text-textPrimary">
+            Import <span className="text-primary">Calendar</span>
+          </h1>
         </div>
 
-        {importedSources.has('college') && (
-          <div className="mt-2 bg-white rounded-2xl p-4 border border-gray-100">
-            <div className="text-sm font-semibold mb-2">Import college calendar (.ics)</div>
+        <main className="flex-1 pb-8">
+          <p className="text-sm font-body text-textSecondary mb-6 leading-relaxed">
+            Upload a <strong className="text-textPrimary">.ics file</strong> exported from Google Calendar, Apple Calendar, or your school/work system. Events will be automatically categorized as classes, shifts, or tasks.
+          </p>
+
+          {/* How to export guide */}
+          <div className="bg-primaryLight rounded-2xl p-4 mb-6 border border-primary/10">
+            <p className="text-xs font-semibold text-primary mb-2">How to export your calendar:</p>
+            <ul className="text-xs text-textSecondary space-y-1.5">
+              <li className="flex items-start gap-2">
+                <span className="w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">G</span>
+                <span><strong className="text-textPrimary">Google:</strong> Settings → Import & Export → Export</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="w-4 h-4 rounded-full bg-textPrimary text-white text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">A</span>
+                <span><strong className="text-textPrimary">Apple:</strong> File → Export → Export…</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="w-4 h-4 rounded-full bg-accent text-white text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">O</span>
+                <span><strong className="text-textPrimary">Outlook:</strong> File → Open & Export → Import/Export</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* File Drop Zone */}
+          <div
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`relative rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-all ${
+              dragActive
+                ? 'border-primary bg-primaryLight scale-[1.01]'
+                : file
+                ? 'border-success bg-green-50'
+                : 'border-border bg-white hover:border-primary/40 hover:bg-primaryLight/30'
+            }`}
+          >
             <input
+              ref={fileInputRef}
               type="file"
               accept=".ics,text/calendar"
-              onChange={(e) => setCollegeFile(e.target.files?.[0] || null)}
-              className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-[#FFF0EC] file:text-[#F07B5A] hover:file:bg-[#FFE2D9]"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="sr-only"
             />
-            <button
-              type="button"
-              onClick={importCollegeIcs}
-              disabled={importing || !collegeFile}
-              className="mt-3 w-full bg-primary text-white py-3 rounded-full font-display font-semibold disabled:opacity-50 active:scale-[0.98] transition"
-            >
-              {importing ? 'Importing…' : 'Import college schedule'}
-            </button>
-          </div>
-        )}
 
-        {importedSources.has('work') && (
-          <div className="mt-2 bg-white rounded-2xl p-4 border border-gray-100">
-            <div className="text-sm font-semibold mb-2">Import work shift calendar (.ics)</div>
-            <input
-              type="file"
-              accept=".ics,text/calendar"
-              onChange={(e) => setWorkFile(e.target.files?.[0] || null)}
-              className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-green-50 file:text-green-600 hover:file:bg-green-100"
-            />
-            <button
-              type="button"
-              onClick={importWorkIcs}
-              disabled={importing || !workFile}
-              className="mt-3 w-full bg-green-500 text-white py-3 rounded-full font-display font-semibold disabled:opacity-50 active:scale-[0.98] transition hover:bg-green-600"
-            >
-              {importing ? 'Importing…' : 'Import work schedule'}
-            </button>
+            {file ? (
+              <div className="animate-fadeIn">
+                <div className="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-3">
+                  <FileUp size={24} className="text-success" />
+                </div>
+                <p className="text-sm font-semibold text-textPrimary">{file.name}</p>
+                <p className="text-xs text-textSecondary mt-1">{(file.size / 1024).toFixed(1)} KB</p>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                  className="mt-2 text-xs text-danger font-semibold hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="animate-fadeIn">
+                <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mx-auto mb-3">
+                  <Upload size={24} className="text-textSecondary" />
+                </div>
+                <p className="text-sm font-semibold text-textPrimary">
+                  {dragActive ? 'Drop your file here' : 'Choose a .ics file'}
+                </p>
+                <p className="text-xs text-textSecondary mt-1">or drag and drop it here</p>
+              </div>
+            )}
           </div>
-        )}
-      </main>
 
-      {/* Footer — Skip / Finish link */}
-      <div className={`absolute bottom-0 left-0 w-full p-6 z-10 pt-10 flex justify-center ${importCount > 0 ? 'bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]' : 'bg-gradient-to-t from-background via-background to-transparent'}`}>
-        <button
-          onClick={() => navigate('/home')}
-          className={importCount > 0 ? "w-full bg-[#F07B5A] text-white py-3.5 px-6 rounded-full font-display font-semibold hover:bg-[#e06a49] active:scale-95 transition-all shadow-md" : "text-sm text-primary font-medium hover:underline transition-colors"}
-        >
-          {importCount > 0 ? 'Finish & Go to Dashboard' : 'Skip for now →'}
-        </button>
+          {/* Import Button */}
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={importing || !file}
+            className="w-full mt-5 bg-primary text-white py-3.5 rounded-2xl font-display font-semibold disabled:opacity-40 active:scale-[0.98] transition-all shadow-blue hover:bg-primaryDark"
+          >
+            {importing ? 'Importing…' : 'Import Calendar'}
+          </button>
+
+          {/* Post-import conflict alert */}
+          {postImportConflicts > 0 && (
+            <div className="mt-5 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 animate-fadeIn">
+              <AlertTriangle size={20} className="text-red-500 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <div className="text-sm font-bold text-red-700">
+                  {postImportConflicts} conflict{postImportConflicts > 1 ? 's' : ''} detected
+                </div>
+                <p className="text-xs text-red-600 mt-1">Imported events overlap with existing schedule items.</p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/home?tab=suggestions')}
+                  className="mt-3 w-full bg-red-500 text-white py-2.5 rounded-full text-sm font-semibold active:scale-95 transition"
+                >
+                  Review Conflicts
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Success state */}
+          {importedCount !== null && importedCount > 0 && postImportConflicts === 0 && (
+            <div className="mt-5 bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start gap-3 animate-fadeIn">
+              <CheckCircle2 size={20} className="text-success mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <div className="text-sm font-bold text-green-700">
+                  {importedCount} events imported successfully!
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/home')}
+                  className="mt-3 w-full bg-success text-white py-2.5 rounded-full text-sm font-semibold active:scale-95 transition"
+                >
+                  Go to Dashboard
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Post-import actions */}
+          {(importedCount !== null || postImportConflicts > 0) && (
+            <div className="mt-8 pt-6 border-t border-border flex flex-col gap-4 animate-fadeIn">
+              <button
+                onClick={() => navigate('/home')}
+                className="w-full bg-primary text-white py-4 rounded-2xl font-display font-bold shadow-blue hover:bg-primaryDark active:scale-[0.98] transition-all"
+              >
+                Finish & Go to Dashboard
+              </button>
+              <button
+                onClick={() => { setFile(null); setImportedCount(null); setPostImportConflicts(0); }}
+                className="w-full py-3 text-sm text-textSecondary font-semibold hover:text-primary transition-colors"
+              >
+                Import another file
+              </button>
+            </div>
+          )}
+
+          {/* Skip link (only if not imported yet) */}
+          {importedCount === null && postImportConflicts === 0 && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => navigate('/home')}
+                className="text-sm text-primary font-medium hover:underline transition-colors"
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );

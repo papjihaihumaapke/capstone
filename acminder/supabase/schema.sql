@@ -33,6 +33,7 @@ CREATE TABLE schedule_items (
   due_date date,
   due_time time,
   course text,
+  completed boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now()
 );
 

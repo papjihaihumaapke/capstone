@@ -6,18 +6,20 @@ import { useNavigate } from 'react-router-dom';
 type ShiftForm = { title: string; date: string; start_time: string; end_time: string; location: string; role: string };
 type ClassForm = { title: string; date: string; start_time: string; end_time: string; location: string; repeats_weekly: boolean };
 type AssignmentForm = { title: string; due_date: string; due_time: string; course: string };
+type RoutineForm = { title: string; category: string; start_time: string; end_time: string; date: string };
 
 export function useItemForm() {
   const navigate = useNavigate();
   const ctx = useContext(AppContext);
   const { addItem, detectConflicts, showToast } = ctx || {};
 
-  const [activeTab, setActiveTab] = useState<'shift' | 'class' | 'assignment'>('shift');
+  const [activeTab, setActiveTab] = useState<'shift' | 'class' | 'assignment' | 'routine'>('shift');
 
-  const [formData, setFormData] = useState<{ shift: ShiftForm; class: ClassForm; assignment: AssignmentForm }>({
+  const [formData, setFormData] = useState<{ shift: ShiftForm; class: ClassForm; assignment: AssignmentForm; routine: RoutineForm }>({
     shift: { title: '', date: '', start_time: '', end_time: '', location: '', role: '' },
     class: { title: '', date: '', start_time: '', end_time: '', location: '', repeats_weekly: false },
     assignment: { title: '', due_date: '', due_time: '', course: '' },
+    routine: { title: '', category: 'other', start_time: '', end_time: '', date: new Date().toISOString().split('T')[0] },
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,6 +53,12 @@ export function useItemForm() {
       const data = formData.assignment;
       if (!data.title) newErrors.title = 'Title is required';
       if (!data.due_date) newErrors.due_date = 'Due date is required';
+    } else if (activeTab === 'routine') {
+      const data = formData.routine;
+      if (!data.title) newErrors.title = 'Title is required';
+      if (!data.date) newErrors.date = 'Start date is required';
+      if (!data.start_time) newErrors.start_time = 'Start time is required';
+      if (!data.end_time) newErrors.end_time = 'End time is required';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -86,7 +94,7 @@ export function useItemForm() {
         } as any);
       } else if (activeTab === 'assignment') {
         const data = formData.assignment;
-        const time = data.due_time || '00:00';
+        const time = data.due_time || '23:59';
         await addItem({
           type: 'assignment',
           title: data.title,
@@ -96,6 +104,18 @@ export function useItemForm() {
           course: data.course,
           due_date: data.due_date,
           due_time: data.due_time,
+          user_id: ctx?.user?.id || ''
+        } as any);
+      } else if (activeTab === 'routine') {
+        const data = formData.routine;
+        await addItem({
+          type: 'routine',
+          title: data.title,
+          date: data.date,
+          start_time: data.start_time,
+          end_time: data.end_time,
+          category: data.category,
+          repeats_weekly: true,
           user_id: ctx?.user?.id || ''
         } as any);
       }
@@ -119,7 +139,7 @@ export function useItemForm() {
     activeTab,
     setActiveTab,
     formData,
-    activeForm: formData[activeTab],
+    activeForm: (formData as any)[activeTab],
     updateFormData,
     validate,
     submit,

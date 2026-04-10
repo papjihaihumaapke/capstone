@@ -1,44 +1,57 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, Home, Settings } from 'lucide-react';
+import { Home, CalendarDays, Plus, Settings } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+
+const TABS = [
+  { name: 'Home', path: '/home', icon: Home },
+  { name: 'Calendar', path: '/calendar', icon: CalendarDays },
+  { name: 'Add', path: '/add', icon: Plus, isAdd: true },
+  { name: 'Settings', path: '/settings', icon: Settings },
+];
 
 export default function BottomNav({ className = '' }: { className?: string }) {
   const location = useLocation();
-  const { user, conflictCount } = useAppContext();
+  const { user } = useAppContext();
   const currentPath = location.pathname;
   if (!user) return null;
 
-  const TABS = [
-    { name: 'Home', path: '/home', icon: Home },
-    { name: 'Calendar', path: '/calendar', icon: Calendar },
-    { name: 'Settings', path: '/settings', icon: Settings },
-  ];
-
   return (
-    <nav className={`fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 z-30 px-6 flex items-center justify-between ${className}`}>
+    <nav className={`fixed bottom-0 left-0 right-0 h-[68px] bg-white border-t border-border shadow-[0_-4px_20px_rgba(15,23,42,0.06)] z-30 px-4 flex items-center justify-around ${className}`}>
       {TABS.map((tab) => {
-        const isActive = currentPath === tab.path;
+        const isActive = currentPath.startsWith(tab.path);
         const Icon = tab.icon;
-        const showBadge = tab.name === 'Home' && conflictCount > 0;
+
+        if ((tab as { isAdd?: boolean }).isAdd) {
+          return (
+            <Link
+              key={tab.name}
+              to={tab.path}
+              className="flex items-center justify-center w-12 h-12 rounded-2xl bg-primary shadow-blue active:scale-95 transition-transform"
+            >
+              <Icon size={22} className="text-white" strokeWidth={2.5} />
+            </Link>
+          );
+        }
+
         return (
           <Link
             key={tab.name}
             to={tab.path}
-            className={`flex flex-col items-center gap-1 min-w-[64px] transition-colors relative ${
-              isActive ? 'text-[#F07B5A]' : 'text-gray-400 hover:text-gray-600'
-            }`}
+            className="flex flex-col items-center gap-1 flex-1 py-1 relative"
           >
             <div className="relative">
-              <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-              {showBadge && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-[3px]">
-                  {conflictCount > 9 ? '9+' : conflictCount}
-                </span>
-              )}
+              <Icon
+                size={22}
+                className={isActive ? 'text-primary' : 'text-textSecondary'}
+                strokeWidth={isActive ? 2.5 : 2}
+              />
             </div>
-            <span className={`text-[10px] font-body ${isActive ? 'font-semibold' : 'font-medium'}`}>
+            <span className={`text-[10px] font-semibold transition-colors ${isActive ? 'text-primary' : 'text-textSecondary'}`}>
               {tab.name}
             </span>
+            {isActive && (
+              <span className="absolute -top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-primary rounded-full" />
+            )}
           </Link>
         );
       })}

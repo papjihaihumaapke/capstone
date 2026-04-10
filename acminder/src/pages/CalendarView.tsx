@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useContext } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, addMonths, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import MiniCalendar from '../components/MiniCalendar';
 import ScheduleItemCard from '../components/ScheduleItemCard';
 import { AppContext } from '../context/AppContext';
@@ -45,7 +45,7 @@ export default function CalendarView() {
 
   return (
     <div className="relative min-h-screen bg-background animate-fadeIn">
-      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8 pb-24">
         {/* Header */}
         <div className="flex items-center justify-between p-4 bg-white shadow-sm rounded-xl mx-auto max-w-md lg:max-w-none">
           <button onClick={prevMonth}>
@@ -70,7 +70,16 @@ export default function CalendarView() {
 
         {/* Schedule Section */}
         <div className="px-4">
-          <h2 className="text-sm font-semibold text-textSecondary uppercase mb-3">{sectionTitle}</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-textSecondary uppercase">{sectionTitle}</h2>
+            <button
+              onClick={() => navigate(`/add?date=${selectedDateStr}`)}
+              className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-all"
+              aria-label="Add item for this date"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
           {todaysItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="text-4xl text-gray-300 mb-4">📅</div>
@@ -82,8 +91,10 @@ export default function CalendarView() {
                 <ScheduleItemCard
                   key={item.id}
                   item={item}
+                  userId={ctx?.user?.id || ''}
                   conflictSeverity={getConflictSeverity(item.id)}
                   onClick={() => navigate(`/item/${item.id}`)}
+                  onMarkDone={() => ctx?.updateItem?.(item.id, { completed: true })}
                 />
               ))}
             </div>

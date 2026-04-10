@@ -1,11 +1,109 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Upload, Zap, Sparkles } from 'lucide-react';
+
+function SlideGraphic({ index }: { index: number }) {
+  if (index === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="relative flex flex-col items-center gap-3">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shadow-card">
+            <Upload size={30} className="text-primary" />
+          </div>
+          <div className="flex flex-col gap-2 w-52">
+            {[
+              { title: 'College', time: '9:00 – 11:00 AM', color: 'border-primary bg-primaryLight' },
+              { title: 'Work', time: '12:00 – 4:00 PM', color: 'border-accent bg-accentLight' },
+              { title: 'Tasks', time: 'Friday', color: 'border-warning bg-warning/5' },
+            ].map(({ title, time, color }) => (
+              <div key={title} className={`flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-card border-l-4 ${color}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-textPrimary truncate">{title}</div>
+                  <div className="text-[10px] text-textSecondary mt-0.5">{time}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (index === 1) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="relative w-56">
+          <div className="absolute top-0 left-0 w-48 h-16 rounded-2xl bg-primaryLight border-l-4 border-primary flex items-center px-4 shadow-card">
+            <div>
+              <div className="text-[11px] font-bold text-primary">Work</div>
+              <div className="text-[10px] text-primary/70 mt-0.5">10:00 – 2:00 PM</div>
+            </div>
+          </div>
+          <div className="absolute top-10 left-6 w-48 h-16 rounded-2xl bg-accentLight border-l-4 border-accent flex items-center px-4 shadow-card">
+            <div>
+              <div className="text-[11px] font-bold text-accent">College</div>
+              <div className="text-[10px] text-accent/70 mt-0.5">11:00 AM – 1:00 PM</div>
+            </div>
+          </div>
+          <div className="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-danger flex items-center justify-center shadow-elevated">
+            <Zap size={16} className="text-white" />
+          </div>
+          <div className="mt-28 ml-1">
+            <div className="inline-flex items-center gap-2 bg-red-50 border border-red-100 rounded-full px-3 py-1.5">
+              <div className="w-2 h-2 rounded-full bg-danger" />
+              <span className="text-xs font-bold text-danger">Overlap · 11:00 – 12:00 PM</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <div className="w-56 flex flex-col gap-3">
+        <div className="bg-white rounded-2xl p-4 shadow-elevated border border-border">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-gradient flex items-center justify-center">
+              <Sparkles size={15} className="text-white" />
+            </div>
+            <span className="text-xs font-bold text-textPrimary">AI Suggestion</span>
+          </div>
+          <p className="text-[11px] text-textSecondary leading-relaxed">
+            Move your <span className="font-bold text-primary">Work</span> to <span className="font-bold text-primary">2:00 – 6:00 PM</span> to remove the conflict with College.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1 bg-primaryLight rounded-xl p-3 text-center border border-primary/10">
+            <div className="text-[10px] text-primary/70 font-medium">Alt 1</div>
+            <div className="text-xs font-bold text-primary mt-0.5">7:00–11:00 AM</div>
+          </div>
+          <div className="flex-1 bg-accentLight rounded-xl p-3 text-center border border-accent/10">
+            <div className="text-[10px] text-accent/70 font-medium">Alt 2</div>
+            <div className="text-xs font-bold text-accent mt-0.5">3:00–7:00 PM</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const SLIDES = [
-  { id: 1, title: 'Import Schedules', desc: 'Upload your class timetable and work shifts by picking your exported .ics files.', image: '/onboarding_smart.png' },
-  { id: 2, title: 'Detect Conflicts', desc: 'AcMinder instantly scans your calendars and highlights overlapping events or tight deadlines.', image: '/onboarding_gentle.png' },
-  { id: 3, title: 'Resolve with AI', desc: 'Get smart, actionable suggestions on how to shuffle your tasks and fix schedule conflicts.', image: '/onboarding_flexible.png' }
+  {
+    title: 'Import Schedules',
+    desc: 'Upload your college timetable and work shifts by picking your exported .ics files.',
+    step: '01',
+  },
+  {
+    title: 'Detect Conflicts',
+    desc: 'Acminder instantly scans your calendars and highlights overlapping events and tight deadlines.',
+    step: '02',
+  },
+  {
+    title: 'Resolve with AI',
+    desc: 'Get smart, actionable suggestions to fix schedule clashes before they become a problem.',
+    step: '03',
+  },
 ];
 
 export default function Onboarding() {
@@ -17,58 +115,75 @@ export default function Onboarding() {
     else setCurrent(c => c + 1);
   };
 
+  const slide = SLIDES[current];
+
   return (
-    <div className="flex flex-col min-h-dvh w-full max-w-md mx-auto bg-background px-6 pt-12 pb-10">
-      
-      {/* Swipeable Illustration Area */}
-      <div className="flex-1 flex items-center justify-center pt-8">
-        <div className="w-full aspect-square max-h-72 rounded-[2rem] bg-[#FFF0EC] relative flex items-center justify-center transform transition-all duration-300 ease-out shadow-sm overflow-hidden">
-          {SLIDES.map((slide, idx) => (
-            <img
-              key={slide.id}
-              src={slide.image}
-              alt={slide.title}
-              className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-out ${current === idx ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Text Content with Fade Transition */}
-      <div className="mt-12 h-28 flex flex-col items-center text-center px-4">
-        <h2 
-          key={`title-${current}`}
-          className="text-3xl font-display font-bold text-textPrimary mb-3 animate-fadeIn"
-        >
-          {SLIDES[current].title}
-        </h2>
-        <p 
-          key={`desc-${current}`}
-          className="text-base font-body text-textSecondary max-w-[280px] leading-relaxed animate-fadeIn"
-        >
-          {SLIDES[current].desc}
-        </p>
-      </div>
-
-      {/* Navigation & Indicators */}
-      <div className="mt-8 flex items-center justify-between pb-4">
-        <div className="flex gap-2.5">
+    <div className="flex flex-col min-h-dvh w-full max-w-md mx-auto bg-background">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-6 pt-12 pb-4">
+        <div className="flex gap-1.5">
           {SLIDES.map((_, idx) => (
-            <div 
-              key={idx} 
-              className={`h-2.5 rounded-full transition-all duration-300 ${current === idx ? 'w-8 bg-primary' : 'w-2.5 bg-gray-200'}`}
+            <div
+              key={idx}
+              className={`h-1.5 rounded-full transition-all duration-400 ${
+                current === idx ? 'w-8 bg-primary' : current > idx ? 'w-4 bg-primary/40' : 'w-4 bg-border'
+              }`}
             />
           ))}
         </div>
-
-        <button 
-          onClick={handleNext}
-          className="h-14 w-14 rounded-full bg-primary text-white flex items-center justify-center transition-transform active:scale-[0.95] shadow hover:shadow-md"
+        <button
+          onClick={() => navigate('/signup')}
+          className="text-sm text-textSecondary font-medium hover:text-primary transition-colors"
         >
-          <ArrowRight size={24} />
+          Skip
         </button>
       </div>
 
+      {/* Graphic */}
+      <div className="flex-1 flex items-center justify-center px-6 pt-2">
+        <div className="w-full aspect-square max-h-72 rounded-3xl bg-white border border-border shadow-elevated relative overflow-hidden p-6">
+          {/* Step badge */}
+          <div className="absolute top-4 right-4 w-10 h-10 rounded-2xl bg-blue-gradient flex items-center justify-center">
+            <span className="text-white text-xs font-bold">{slide.step}</span>
+          </div>
+          <SlideGraphic index={current} />
+        </div>
+      </div>
+
+      {/* Text content */}
+      <div className="px-6 mt-8 mb-6">
+        <h2
+          key={`title-${current}`}
+          className="text-3xl font-display font-bold text-textPrimary mb-3 animate-fadeIn"
+        >
+          {slide.title}
+        </h2>
+        <p
+          key={`desc-${current}`}
+          className="text-base font-body text-textSecondary leading-relaxed animate-fadeIn"
+        >
+          {slide.desc}
+        </p>
+      </div>
+
+      {/* Navigation */}
+      <div className="px-6 pb-10 flex items-center justify-between">
+        {current > 0 ? (
+          <button
+            onClick={() => setCurrent(c => c - 1)}
+            className="h-12 px-6 rounded-2xl border border-border text-textSecondary font-semibold text-sm hover:border-primary hover:text-primary transition-colors"
+          >
+            Back
+          </button>
+        ) : <div />}
+
+        <button
+          onClick={handleNext}
+          className="h-14 w-14 rounded-2xl bg-primary text-white flex items-center justify-center transition-all active:scale-[0.95] shadow-blue hover:bg-primaryDark ml-auto"
+        >
+          <ArrowRight size={22} />
+        </button>
+      </div>
     </div>
   );
 }

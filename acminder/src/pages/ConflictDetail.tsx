@@ -1,21 +1,35 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
-import { ArrowLeft, AlertTriangle, Calendar, CheckCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { generateConflictWithGemini, type GeminiConflictResult } from '../lib/gemini';
-import { timeToMinutes, itemOccursOnDate } from '../lib/conflictEngine';
-import type { ScheduleItem } from '../types';
+import { itemOccursOnDate } from '../lib/conflictEngine';
 
-function formatDate(dateStr: string) {
-  // Append T00:00:00 to avoid UTC midnight → previous-day timezone shift
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+const AI_CACHE_PREFIX = 'acminder_ai_cache_';
+
+function getCacheKey(conflictId: string) {
+  return `${AI_CACHE_PREFIX}${conflictId}`;
 }
 
-function toHHMM(mins: number) {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+function loadCachedAi(conflictId: string): { summary: string; suggestions: GeminiConflictResult['suggestions'] } | null {
+  try {
+    const raw = localStorage.getItem(getCacheKey(conflictId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.summary && Array.isArray(parsed?.suggestions)) return parsed;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function saveCachedAi(conflictId: string, data: { summary: string; suggestions: GeminiConflictResult['suggestions'] }) {
+  try {
+    localStorage.setItem(getCacheKey(conflictId), JSON.stringify(data));
+  } catch { /* ignore */ }
+}
+
+function formatDate(dateStr: string) {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 function formatTime12(timeStr: string | undefined) {
@@ -32,31 +46,6 @@ function formatTime12(timeStr: string | undefined) {
   return `${h12}:${mins} ${ampm}`;
 }
 
-function getItemInterval(item: ScheduleItem) {
-  if (item.type === 'assignment') {
-    const dueDate = item.due_date || item.date;
-    const t = item.due_time || item.start_time;
-    if (!dueDate || !t) return null;
-    const start = timeToMinutes(t);
-    return { date: dueDate, start, end: start + 1 };
-  }
-  if (!item.start_time || !item.end_time || !item.date) return null;
-  return { date: item.date, start: timeToMinutes(item.start_time), end: timeToMinutes(item.end_time) };
-}
-
-function getItemSubtitle(item: any) {
-  if (item.type === 'shift') {
-    return [item.role, item.location].filter(Boolean).join(' • ');
-  }
-  if (item.type === 'class') {
-    return [item.course, item.location].filter(Boolean).join(' • ');
-  }
-  if (item.type === 'assignment') {
-    return item.course || '';
-  }
-  return item.location || '';
-}
-
 export default function ConflictDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -64,8 +53,6 @@ export default function ConflictDetail() {
   const { conflicts, resolveConflict, showToast, items } = ctx || {};
 
   const conflict = conflicts?.find((c) => c.id === id);
-
-  // ── All hooks must be called unconditionally before any early return ──
   const itemA = conflict?.item_a ?? null;
   const itemB = conflict?.item_b ?? null;
   const conflictDate = conflict?.date || '';
@@ -80,325 +67,189 @@ export default function ConflictDetail() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiSuggestions, setAiSuggestions] = useState<GeminiConflictResult['suggestions']>([]);
-  const [aiError, setAiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      const cached = loadCachedAi(id);
+      if (cached) {
+        setAiSummary(cached.summary);
+        setAiSuggestions(cached.suggestions);
+      } else {
+        fetchAi();
+      }
+    }
+  }, [id]);
 
   const otherItemsSameDateInfo = useMemo(() => {
     if (!items || !itemA || !itemB || !conflictDate) {
-      return { additionalConflictingItems: [], nonConflictingItemsToday: [] };
+      return { additionalConflictingItems: [] };
     }
-
-    const otherItemsSameDate = items.filter((it) => {
-      if (!itemOccursOnDate(it, conflictDate)) return false;
-      return it.id !== itemA.id && it.id !== itemB.id;
-    }).sort((a, b) => {
-      const timeA = a.type === 'assignment' ? (a.due_time || a.start_time || '') : a.start_time;
-      const timeB = b.type === 'assignment' ? (b.due_time || b.start_time || '') : b.start_time;
-      return timeA.localeCompare(timeB);
-    });
-
-    const additionalConflictingItems = otherItemsSameDate.filter((it) => {
-      const itv = getItemInterval(it);
-      const aItv = getItemInterval(itemA);
-      const bItv = getItemInterval(itemB);
-      if (!itv) return false;
-      
-      const overlapsA = aItv && itv.start < aItv.end && aItv.start < itv.end;
-      const overlapsB = bItv && itv.start < bItv.end && bItv.start < itv.end;
-      return overlapsA || overlapsB;
-    });
-
-    const nonConflictingItemsToday = otherItemsSameDate.filter(it => !additionalConflictingItems.includes(it));
-
-    return { additionalConflictingItems, nonConflictingItemsToday };
+    return {
+      additionalConflictingItems: items.filter(it => it.id !== itemA.id && it.id !== itemB.id && itemOccursOnDate(it, conflictDate)),
+    };
   }, [items, itemA, itemB, conflictDate]);
 
-  const closeAlternatives = useMemo(() => {
-    if (!conflict || !items || !conflictDate || !overlapWindow || !itemA || !itemB) return [];
+  const fetchAi = async () => {
+    if (!conflict || !itemA || !itemB || !overlapWindow || !conflictDate) return;
+    
+    setAiLoading(true);
 
-    const movable =
-      itemA.type === 'shift' ? itemA
-        : itemB.type === 'shift' ? itemB
-          : itemA.type === 'assignment' ? itemA
-            : itemB.type === 'assignment' ? itemB
-              : null;
-
-    if (!movable) return [];
-    const movableInterval = getItemInterval(movable);
-    if (!movableInterval) return [];
-
-    const duration = movableInterval.end - movableInterval.start;
-    if (duration <= 0) return [];
-
-    const minBoundary = timeToMinutes('08:00');
-    const maxBoundary = timeToMinutes('22:00');
-    const offsets = [-180, -120, -90, -60, -45, -30, -15, 15, 30, 45, 60, 90, 120, 180];
-
-    const otherItemsSameDate = [
-      ...otherItemsSameDateInfo.additionalConflictingItems,
-      ...otherItemsSameDateInfo.nonConflictingItemsToday
-    ];
-
-    const candidates: Array<{ start_time: string; end_time: string }> = [];
-    for (const offset of offsets) {
-      const start = movableInterval.start + offset;
-      const end = start + duration;
-      if (start < minBoundary || end > maxBoundary) continue;
-
-      const candInterval = { start, end };
-      const overlapsOther = otherItemsSameDate.some((it) => {
-        const intv = getItemInterval(it);
-        if (!intv) return false;
-        return candInterval.start < intv.end && intv.start < candInterval.end;
-      });
-      if (overlapsOther) continue;
-      candidates.push({ start_time: toHHMM(start), end_time: toHHMM(end) });
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
+    if (!apiKey) {
+      setAiSummary(isMinor ? 'Events are very close in time.' : 'Overlapping schedules detected.');
+      setAiLoading(false);
+      return;
     }
 
-    candidates.sort(
-      (x, y) =>
-        Math.abs(timeToMinutes(x.start_time) - movableInterval.start) -
-        Math.abs(timeToMinutes(y.start_time) - movableInterval.start),
-    );
-    const alternative_times = candidates
-      .filter((c, idx, self) => idx === self.findIndex((x) => x.start_time === c.start_time && x.end_time === c.end_time))
-      .slice(0, 3);
+    try {
+      const result = await generateConflictWithGemini({
+        apiKey,
+        item_a: itemA,
+        item_b: itemB,
+        conflict_date: conflictDate,
+        overlap_window: overlapWindow,
+        close_alternatives: [],
+        additional_conflicts: otherItemsSameDateInfo.additionalConflictingItems,
+      });
+      setAiSummary(result.summary);
+      setAiSuggestions(result.suggestions || []);
+      if (id) saveCachedAi(id, { summary: result.summary, suggestions: result.suggestions || [] });
+    } catch (e: any) {
+      showToast?.(e?.message || 'Failed to generate suggestions.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
-    if (!alternative_times.length) return [];
-    return [{ move_item_id: movable.id, move_item_type: movable.type, alternative_times }];
-  }, [conflict, conflictDate, overlapWindow, itemA, itemB, otherItemsSameDateInfo]);
-
-  const conflictDateKey = conflictDate;
-  const overlapWindowKey = overlapWindow ? `${overlapWindow.start_time}-${overlapWindow.end_time}` : '';
-  const closeAlternativesKey = useMemo(() => JSON.stringify(closeAlternatives), [closeAlternatives]);
-
-  useEffect(() => {
-    if (!conflict || !conflictDate || !overlapWindow || !itemA || !itemB) return;
-
-    let cancelled = false;
-
-    const run = async () => {
-      setAiError(null);
-      setAiSummary(null);
-      setAiSuggestions([]);
-
-      // Respect the Smart Suggestions preference
-      const storedPrefs = localStorage.getItem('acminder_prefs');
-      const smartSuggestions = storedPrefs ? JSON.parse(storedPrefs).smartSuggestions !== false : true;
-
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string | undefined;
-      if (!apiKey || !smartSuggestions) {
-        setAiSummary(
-          isMinor
-            ? `This ${itemA.type} and ${itemB.type} are scheduled very close to each other.`
-            : `This ${itemA.type} and ${itemB.type} overlap between ${formatTime12(overlapWindow.start_time)} and ${formatTime12(overlapWindow.end_time)}.`,
-        );
-        return;
-      }
-
-      setAiLoading(true);
-      try {
-        const result = await generateConflictWithGemini({
-          apiKey,
-          item_a: itemA,
-          item_b: itemB,
-          conflict_date: conflictDate,
-          overlap_window: overlapWindow,
-          close_alternatives: closeAlternatives,
-          additional_conflicts: otherItemsSameDateInfo?.additionalConflictingItems || [],
-        });
-        if (cancelled) return;
-        setAiSummary(result.summary);
-        setAiSuggestions(result.suggestions || []);
-      } catch (e: any) {
-        if (cancelled) return;
-        setAiError(e?.message || 'Failed to generate AI suggestions.');
-      } finally {
-        if (!cancelled) setAiLoading(false);
-      }
-    };
-
-    run();
-    return () => { cancelled = true; };
-  }, [conflict?.id, itemA?.id, itemB?.id, conflictDateKey, overlapWindowKey, closeAlternativesKey]);
-
-  // ── Early return is safe here — all hooks have already been called ──
-  if (!conflict || !itemA || !itemB) {
-    return <div className="p-6 text-sm text-textSecondary">Conflict not found.</div>;
-  }
-
-  const subtitle =
-    conflictDate && overlapWindow
-      ? (() => {
-          let minStart = timeToMinutes(overlapWindow.start_time);
-          let maxEnd = timeToMinutes(overlapWindow.end_time);
-
-          if (otherItemsSameDateInfo?.additionalConflictingItems?.length) {
-             const all = [itemA, itemB, ...otherItemsSameDateInfo.additionalConflictingItems];
-             for (const it of all) {
-                const intv = getItemInterval(it);
-                if (intv) {
-                   if (intv.start < minStart) minStart = intv.start;
-                   if (intv.end > maxEnd) maxEnd = intv.end;
-                }
-             }
-          }
-          return `${formatDate(conflictDate)} · ${formatTime12(toHHMM(minStart))} – ${formatTime12(toHHMM(maxEnd))}`;
-        })()
-      : isMinor
-        ? 'Events are scheduled too close to each other'
-        : 'Conflict detected';
+  if (!conflict || !itemA || !itemB) return <div className="p-10 text-center text-sm text-textSecondary animate-pulse">Loading conflict data...</div>;
 
   const handleResolve = () => {
-    resolveConflict && resolveConflict(id!);
-    showToast && showToast('Conflict resolved!');
+    resolveConflict?.(id!);
+    showToast?.('Conflict marked as resolved');
     navigate('/home');
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 animate-fadeIn">
-      <header className="flex items-center mb-6">
-        <button onClick={() => navigate('/home')} className="mr-4" aria-label="Go back">
-          <ArrowLeft size={24} />
-        </button>
-        <AlertTriangle size={24} className={`${isMinor ? 'text-orange-500' : 'text-primary'} mr-2`} />
-        <h1 className="text-xl font-display font-bold">{isMinor ? 'Tight Schedule' : 'Schedule Conflict'}</h1>
+    <div className="min-h-screen bg-background flex flex-col animate-fadeIn">
+      <header className="h-16 bg-white border-b border-gray-100 flex items-center px-4 sticky top-0 z-30">
+        <div className="flex-1">
+          <button 
+            onClick={() => navigate(-1)} 
+            className="-ml-2 w-11 h-11 rounded-full flex items-center justify-center hover:bg-black/5 active:scale-95 transition-all text-textPrimary" 
+            aria-label="Go back"
+          >
+            <ArrowLeft size={22} />
+          </button>
+        </div>
+        <h1 className="flex-[3] text-center font-display font-bold text-base text-textPrimary">
+          {isMinor ? 'Tight Schedule' : 'Conflict Resolution'}
+        </h1>
+        <div className="flex-1" />
       </header>
 
-      <p className="text-sm text-textSecondary mb-6">{subtitle}</p>
-
-      <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-4">Conflicting Items</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[itemA, itemB, ...(otherItemsSameDateInfo?.additionalConflictingItems || [])].map((item) => (
-            <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-red-100 relative">
-              <button
-                onClick={() => navigate(`/item/${item.id}`)}
-                className="absolute top-2 right-2 text-xs text-primary font-bold hover:underline"
-              >
-                EDIT
-              </button>
-              <h3 className="font-semibold text-red-900">{item.title}</h3>
-              <p className="text-sm text-red-700/80">
-                {item.type === 'assignment'
-                  ? `Due: ${formatTime12(item.due_time ?? item.start_time ?? '')}`
-                  : `${formatTime12(item.start_time)} - ${formatTime12(item.end_time)}`}
-              </p>
-              <p className="text-xs text-red-700/60 mt-1 font-medium">
-                {getItemSubtitle(item)}
-              </p>
+      <main className="flex-1 p-4 lg:p-10 max-w-2xl mx-auto w-full space-y-6">
+        <div className="bg-white rounded-[2rem] shadow-card border border-gray-100 p-6 lg:p-8 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-xl ${isMinor ? 'bg-warning/10 text-warning' : 'bg-danger/10 text-danger'} flex items-center justify-center`}>
+                <AlertTriangle size={18} />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-textSecondary">
+                {isMinor ? 'Caution: Tight Gap' : 'Critical: Overlap'}
+              </span>
             </div>
-          ))}
-        </div>
-      </section>
+            <span className="text-[11px] font-semibold text-textSecondary px-3 py-1 bg-surface rounded-full">{formatDate(conflictDate)}</span>
+          </div>
 
-      {(otherItemsSameDateInfo?.nonConflictingItemsToday?.length || 0) > 0 && (
-        <section className="mb-6">
-          <h2 className="text-lg font-semibold mb-4 text-textSecondary">Also on this day</h2>
-          <div className="flex flex-col gap-3">
-            {otherItemsSameDateInfo?.nonConflictingItemsToday?.map((item) => (
-              <div key={item.id} className="bg-white/60 rounded-xl p-3 shadow-sm border border-gray-100 flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-sm">{item.title}</h3>
-                  <p className="text-xs text-textSecondary mt-1">
-                    {getItemSubtitle(item)}
-                  </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-surface rounded-2xl border border-gray-100">
+               <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">First Item</span>
+               <h3 className="text-sm font-bold text-textPrimary truncate mt-1">{itemA.title}</h3>
+               <p className="text-xs text-textSecondary font-semibold mt-0.5">{formatTime12(itemA.start_time)}</p>
+            </div>
+            <div className="p-4 bg-surface rounded-2xl border border-gray-100">
+               <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Second Item</span>
+               <h3 className="text-sm font-bold text-textPrimary truncate mt-1">{itemB.title}</h3>
+               <p className="text-xs text-textSecondary font-semibold mt-0.5">{formatTime12(itemB.start_time)}</p>
+            </div>
+          </div>
+        </div>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2">
+              <Sparkles size={18} className="text-primary" />
+              <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-textSecondary">Smart Advice</h2>
+            </div>
+            <button 
+              onClick={() => fetchAi()} 
+              disabled={aiLoading}
+              className="p-2 text-primary hover:bg-primary/5 rounded-full transition active:scale-90"
+              title="Regenerate suggestions"
+            >
+              <RefreshCw size={16} className={aiLoading ? 'animate-spin' : ''} />
+            </button>
+          </div>
+
+          {!aiLoading ? (
+            <div className="space-y-4">
+              {aiSummary && (
+                <div className="bg-indigo-50/50 rounded-3xl p-5 lg:p-6 border border-indigo-100/50">
+                  <p className="text-sm text-indigo-900 leading-relaxed font-medium italic">"{aiSummary}"</p>
                 </div>
-                <button
-                  onClick={() => navigate(`/item/${item.id}`)}
-                  className="text-xs font-semibold text-gray-400 hover:text-primary transition"
-                >
-                  VIEW
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="mb-6">
-        <h2 className="text-lg font-semibold mb-4">Conflict Summary & AI Suggestions</h2>
-
-        {aiLoading && (
-          <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-textSecondary">
-            Generating suggestions…
-          </div>
-        )}
-
-        {!aiLoading && aiSummary && (
-          <div className="bg-white rounded-xl p-4 border border-gray-100 mb-4">
-            <div className="flex items-start gap-3">
-              <Sparkles size={22} className="text-primary mt-1" />
-              <div>
-                <h3 className="font-semibold mb-1">Summary</h3>
-                <p className="text-sm text-textSecondary">{aiSummary}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {!!aiError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl p-4 mb-4">
-            {aiError}
-          </div>
-        )}
-
-        <div className="space-y-4">
-          {aiSuggestions.length === 0 && !aiLoading ? (
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
-              <Calendar size={24} className="text-primary mt-1" />
-              <div>
-                <h3 className="font-semibold">
-                  {!import.meta.env.VITE_GEMINI_API_KEY ? 'Suggestions unavailable' : 'No suggestions found'}
-                </h3>
-                <p className="text-sm text-textSecondary">
-                  {!import.meta.env.VITE_GEMINI_API_KEY
-                    ? 'Add `VITE_GEMINI_API_KEY` to enable Gemini conflict suggestions.'
-                    : 'The AI could not find any available alternative time slots for this conflict.'}
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {aiSuggestions.map((s, idx) => (
-            <div key={idx} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
-              <CheckCircle size={24} className="text-primary mt-1" />
-              <div className="flex-1">
-                <h3 className="font-semibold">
-                  {s.proposed_start_time && s.proposed_end_time
-                    ? `Move ${s.move_item_type} to ${formatTime12(s.proposed_start_time)} - ${formatTime12(s.proposed_end_time)}`
-                    : s.move_item_type && s.move_item_type !== 'none'
-                      ? `Adjust ${s.move_item_type}`
-                      : 'Recommendation'}
-                </h3>
-                <p className="text-sm text-textSecondary mt-1">{s.reason}</p>
-                {s.alternative_times?.length ? (
-                  <div className="mt-3 text-xs text-gray-500">
-                    Nearby alternatives:{' '}
-                    {s.alternative_times
-                      .map((t) => `${formatTime12(t.start_time)}-${formatTime12(t.end_time)}`)
-                      .slice(0, 3)
-                      .join(', ')}
+              )}
+              
+              <div className="grid grid-cols-1 gap-4">
+                {aiSuggestions.map((s, idx) => (
+                  <div key={idx} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex flex-col">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={18} className="text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-textPrimary">
+                          {s.proposed_start_time 
+                            ? `Move ${s.move_item_type} to ${formatTime12(s.proposed_start_time)}` 
+                            : `Adjust ${s.move_item_type || 'Schedule'}`}
+                        </h4>
+                        <p className="text-xs text-textSecondary mt-1 leading-relaxed">{s.reason}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleResolve}
+                      className="w-full bg-white border border-primary/20 text-primary py-2.5 rounded-2xl text-[11px] font-bold uppercase tracking-wider hover:bg-primary hover:text-white transition-all duration-200"
+                    >
+                      Apply Suggestion
+                    </button>
                   </div>
-                ) : null}
+                ))}
               </div>
             </div>
-          ))}
+          ) : (
+            <div className="bg-white rounded-3xl p-10 text-center space-y-4 border border-border">
+               <div className="w-12 h-12 bg-surface rounded-2xl flex items-center justify-center mx-auto animate-bounce">
+                  <Sparkles size={24} className="text-primary" />
+               </div>
+               <p className="text-xs font-bold text-textSecondary uppercase tracking-widest">Consulting AI Advisor...</p>
+            </div>
+          )}
+        </section>
+
+        <div className="pt-6 space-y-4">
+          <button
+            onClick={handleResolve}
+            className="w-full bg-primary text-white py-4 rounded-2xl font-display font-bold shadow-blue hover:bg-primaryDark transition active:scale-[0.98]"
+          >
+            Mark Overall Conflict Resolved
+          </button>
+          <button
+            onClick={() => navigate('/home')}
+            className="w-full text-center text-xs font-bold text-textSecondary hover:underline py-2"
+          >
+            NOT NOW, DISMISS
+          </button>
         </div>
-      </section>
-
-      <button
-        onClick={handleResolve}
-        className="w-full bg-[#F07B5A] text-white py-3 px-6 rounded-full font-semibold hover:bg-[#e06a49] active:scale-95 transition-colors mb-4"
-      >
-        Conflict Resolved
-      </button>
-
-      <button
-        onClick={() => navigate('/home')}
-        className="w-full text-center text-sm text-primary"
-      >
-        Back to Schedule
-      </button>
+      </main>
     </div>
   );
 }

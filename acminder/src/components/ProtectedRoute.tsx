@@ -1,8 +1,10 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 
 export default function ProtectedRoute() {
-  const { user, loading } = useAppContext();
+  const { user, loading, isNewUser, clearNewUser } = useAppContext();
+  const location = useLocation();
+
   if (loading) {
     return (
       <div className="min-h-dvh w-full flex items-center justify-center bg-background">
@@ -10,6 +12,14 @@ export default function ProtectedRoute() {
       </div>
     );
   }
-  return user ? <Outlet /> : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+
+  // Redirect new OAuth users to onboarding (but don't loop if already on /import)
+  if (isNewUser && location.pathname !== '/import') {
+    clearNewUser();
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return <Outlet />;
 }
 

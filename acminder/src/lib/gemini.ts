@@ -125,41 +125,18 @@ export async function generateConflictWithGemini(input: {
 }): Promise<GeminiConflictResult> {
   const { apiKey, item_a, item_b, conflict_date, overlap_window, close_alternatives, additional_conflicts = [] } = input;
 
-  const prompt = `
-You are a scheduling assistant helping a student manage conflicts between work shifts, university classes, and assignments.
+  const prompt = `Scheduling conflict. DO NOT restate the date. DO NOT restate the conflicting items. Jump immediately into situational advice.
 
-Conflict date: ${conflict_date}
-Overlap window: ${overlap_window.start_time} - ${overlap_window.end_time}
-Item A: ${item_a.type} "${item_a.title}" (date: ${(item_a as any).date ?? (item_a as any).due_date ?? ''}, time: ${(item_a as any).start_time ?? (item_a as any).due_time ?? ''} - ${(item_a as any).end_time ?? ''})
-Item B: ${item_b.type} "${item_b.title}" (date: ${(item_b as any).date ?? (item_b as any).due_date ?? ''}, time: ${(item_b as any).start_time ?? (item_b as any).due_time ?? ''} - ${(item_b as any).end_time ?? ''})
-${additional_conflicts.length > 0 ? `WARNING: The following additional items ALSO overlap with this block:
-${additional_conflicts.map(c => `- ${c.type} "${c.title}" (${(c as any).start_time ?? (c as any).due_time ?? ''} - ${(c as any).end_time ?? ''})`).join('\n')}` : ''}
+${conflict_date} | ${overlap_window.start_time}-${overlap_window.end_time}
+A: ${item_a.type} "${item_a.title}" ${(item_a as any).start_time ?? (item_a as any).due_time ?? ''}-${(item_a as any).end_time ?? ''}
+B: ${item_b.type} "${item_b.title}" ${(item_b as any).start_time ?? (item_b as any).due_time ?? ''}-${(item_b as any).end_time ?? ''}
+${additional_conflicts.length > 0 ? `Also overlapping: ${additional_conflicts.map(c => `${c.type} "${c.title}" ${(c as any).start_time ?? (c as any).due_time ?? ''}-${(c as any).end_time ?? ''}`).join('; ')}` : ''}
+${close_alternatives.length > 0 ? `Alt slots: ${JSON.stringify(close_alternatives)}` : 'No free alt slots.'}
 
-${close_alternatives.length > 0 
-  ? `Available alternative time slots (JSON). You may select from these if you recommend rescheduling:\n${JSON.stringify(close_alternatives)}` 
-  : `There are no free alternative time slots available on this day.`}
+JSON only:
+{"summary":"string","suggestions":[{"move_item_id":"string?","move_item_type":"shift|class|assignment|none","proposed_start_time":"HH:MM?","proposed_end_time":"HH:MM?","reason":"string"}]}
 
-Return ONLY this JSON (no markdown):
-{
-  "summary": "string",
-  "suggestions": [
-    {
-      "move_item_id": "string (optional)",
-      "move_item_type": "shift | class | assignment | none",
-      "proposed_start_time": "HH:MM (optional)",
-      "proposed_end_time": "HH:MM (optional)",
-      "reason": "string (the advice or justification)"
-    }
-  ]
-}
-
-Rules:
-- summary: 1-2 sentences explaining the conflict in plain English.
-- Provide exactly 2 suggestions.
-- If there ARE alternative time slots provided above, your first suggestion should optionally utilize one (fill in move_item_id, proposed_start_time, etc.).
-- If there are NO alternative time slots, or for your second suggestion, provide qualitative/creative advice in the "reason" field (e.g. "Ask to leave 15 mins early", "Email professor") and omit time fields.
-- If the conflict involves an assignment, ALWAYS suggest completing and submitting the assignment beforehand as one of the solutions.
-`.trim();
+Exactly 2 suggestions. Use alt slots if available for first suggestion. Give creative advice for second (e.g. "Ask to leave early", "Submit assignment beforehand"). If assignment involved, suggest completing it early.`.trim();
 
   const cleanedApiKey = apiKey.trim().replace(/^["']|["']$/g, '');
   const payload = {
