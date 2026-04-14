@@ -21,12 +21,16 @@ function formatTimeOnly(timeStr: string | undefined) {
 }
 
 function getItemSubtitle(item: ScheduleItem) {
-  if (item.type === 'shift') return [item.role, item.location].filter(Boolean).join(' • ');
-  if (item.type === 'class') return [item.course, item.location].filter(Boolean).join(' • ');
+  if (item.type === 'shift')      return [item.role, item.location].filter(Boolean).join(' · ');
+  if (item.type === 'class')      return [item.course, item.location].filter(Boolean).join(' · ');
   if (item.type === 'assignment') return item.course || '';
-  if (item.type === 'routine') return (item as RoutineItem).category || 'Habit';
+  if (item.type === 'routine')    return (item as RoutineItem).category || 'Habit';
   return (item as any).location || '';
 }
+
+const TYPE_LABELS: Record<string, string> = {
+  class: 'College', shift: 'Work', assignment: 'Task', routine: 'Habit'
+};
 
 interface Props {
   item: ScheduleItem;
@@ -47,82 +51,64 @@ export default function ScheduleItemCard({ item, userId, conflictSeverity = 'non
     onMarkDone?.();
   };
 
-  const subtitle = getItemSubtitle(item);
-  const timeDisplay = item.type !== 'assignment' ? formatTimeOnly(item.start_time) : formatTimeOnly((item as any).due_time);
-
-  const getDotColor = () => {
-    if (conflictSeverity !== 'none') return 'bg-orange';
-    if (markedDone) return 'bg-muted';
-    return 'bg-dark';
-  };
-
-  const isConflict = conflictSeverity !== 'none' && !markedDone;
+  const subtitle     = getItemSubtitle(item);
+  const timeDisplay  = item.type !== 'assignment' ? formatTimeOnly(item.start_time) : formatTimeOnly((item as any).due_time);
+  const isConflict   = conflictSeverity !== 'none' && !markedDone;
 
   return (
     <div
       onClick={onClick}
-      className={`bg-surface rounded-card p-3.5 flex items-center gap-3 border border-border cursor-pointer active:scale-[0.98] transition-all hover:bg-appbg/50 ${markedDone ? 'opacity-60' : ''}`}
+      className={`bg-surface rounded-[12px] flex items-center gap-3 px-3.5 py-3 cursor-pointer transition-all hover:shadow-tile-hover ${
+        markedDone ? 'opacity-50' : ''
+      } ${isConflict ? 'border-l-2 border-orange' : ''}`}
+      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.06)' }}
     >
-      {/* Left Column (Time) */}
-      <div className="flex items-center gap-1.5 w-16 shrink-0">
-        <div className={`w-1.5 h-1.5 rounded-full ${getDotColor()}`} />
-        <span className={`text-[11px] font-bold leading-none ${markedDone ? 'text-muted line-through' : 'text-dark'}`}>
-          {timeDisplay}
+      {/* Time */}
+      <div className="w-[52px] shrink-0">
+        <span className={`text-[11px] font-medium leading-none ${markedDone ? 'text-muted line-through' : isConflict ? 'text-orange' : 'text-muted'}`}>
+          {timeDisplay || '—'}
         </span>
       </div>
 
-      {/* Middle Column (Content) */}
+      {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className={`text-bodybold truncate ${markedDone ? 'text-muted line-through' : 'text-dark'}`}>
+        <p className={`text-[13px] font-medium leading-snug truncate ${markedDone ? 'line-through text-muted' : 'text-dark'}`}>
           {item.title}
-        </div>
+        </p>
         {subtitle && (
-          <div className="text-caption text-muted mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
-            {subtitle}
-          </div>
+          <p className="text-[11px] text-muted mt-0.5 truncate">{subtitle}</p>
         )}
       </div>
 
-      {/* Right Column (Badges / Actions) */}
-      <div className="flex gap-1.5 shrink-0 items-center">
-        {isConflict && (
-          <span className="px-2.5 py-0.5 rounded-badge text-[10px] font-bold uppercase tracking-wider bg-peach text-orange">
+      {/* Right side */}
+      <div className="flex items-center gap-2 shrink-0">
+        {isConflict ? (
+          <span className="px-2 py-0.5 rounded-badge text-[10px] font-semibold bg-orange/10 text-orange">
             Overlap
           </span>
-        )}
-        
-        {!isConflict && item.type === 'class' && (
-          <span className="px-2.5 py-0.5 rounded-badge text-[10px] font-bold uppercase tracking-wider bg-dark/5 text-dark">
-            College
-          </span>
-        )}
-        
-        {!isConflict && item.type === 'shift' && (
-          <span className="px-2.5 py-0.5 rounded-badge text-[10px] font-bold uppercase tracking-wider bg-dark/5 text-dark">
-            Work
+        ) : (
+          <span className="px-2 py-0.5 rounded-badge text-[10px] font-medium bg-appbg text-muted">
+            {TYPE_LABELS[item.type] || item.type}
           </span>
         )}
 
-        {!isConflict && item.type === 'assignment' && (
-          <span className="px-2.5 py-0.5 rounded-badge text-[10px] font-bold uppercase tracking-wider border border-dark text-dark">
-            Task
-          </span>
-        )}
-
-        {!markedDone && onMarkDone && !isConflict && (
+        {!markedDone && onMarkDone && (
           <button
             onClick={handleMarkDone}
-            className="w-5 h-5 rounded-full border border-border flex items-center justify-center hover:bg-dark hover:border-dark group ml-1"
+            className="w-5 h-5 rounded-full border border-border flex items-center justify-center hover:border-dark hover:bg-dark group transition-all"
           >
-            <div className="w-2.5 h-2.5 rounded-full bg-transparent group-hover:bg-white transition-colors" />
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+              className="text-transparent group-hover:text-white transition-colors">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
           </button>
         )}
 
         {markedDone && (
-          <div className="w-5 h-5 rounded-full bg-dark flex items-center justify-center ml-1">
-             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-               <polyline points="20 6 9 17 4 12"></polyline>
-             </svg>
+          <div className="w-5 h-5 rounded-full bg-dark flex items-center justify-center">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
           </div>
         )}
       </div>

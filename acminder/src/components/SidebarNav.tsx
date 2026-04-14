@@ -1,80 +1,83 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, CalendarDays, Plus, Settings, Upload } from 'lucide-react';
+import { Home, CalendarDays, Plus, Settings, Upload, User } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 const TABS = [
-  { name: 'Home', path: '/home', icon: Home },
+  { name: 'Home',     path: '/home',     icon: Home },
   { name: 'Calendar', path: '/calendar', icon: CalendarDays },
-  { name: 'Add Item', path: '/add', icon: Plus },
-  { name: 'Import', path: '/import', icon: Upload },
+  { name: 'Import',   path: '/import',   icon: Upload },
+  { name: 'Profile',  path: '/profile',  icon: User },
   { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
 export default function SidebarNav({ className = '' }: { className?: string }) {
   const location = useLocation();
-  const { user } = useAppContext();
-  const currentPath = location.pathname;
-  const isActive = (path: string) => currentPath.startsWith(path);
+  const { user, conflictCount } = useAppContext();
+  const isActive = (path: string) => location.pathname.startsWith(path);
 
   if (!user) return null;
 
+  const initials = (user.email?.split('@')[0] || 'U').slice(0, 2).toUpperCase();
+
   return (
-    <aside className={`fixed left-0 top-0 h-full w-[220px] z-40 bg-white border-r border-border flex flex-col ${className}`}>
+    <aside className={`fixed left-0 top-0 h-full w-[220px] z-40 bg-surface flex flex-col ${className}`}
+      style={{ boxShadow: '1px 0 0 rgba(0,0,0,0.07)' }}>
+
       {/* Brand */}
-      <div className="px-5 py-6 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-gradient flex items-center justify-center shadow-blue">
-            <span className="text-white font-bold text-sm">A</span>
+      <div className="px-5 pt-7 pb-6">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-[10px] bg-dark flex items-center justify-center shrink-0">
+            <span className="text-white font-semibold text-[13px] tracking-tight">A</span>
           </div>
-          <div>
-            <h1 className="text-base font-display font-bold text-primary">Acminder</h1>
-            <p className="text-[10px] text-secondary">Schedule Manager</p>
-          </div>
+          <span className="text-[15px] font-semibold text-dark tracking-tight">Acminder</span>
         </div>
       </div>
 
       {/* Nav links */}
-      <nav className="flex-1 px-3 py-4">
-        <ul className="space-y-1">
-          {TABS.map((tab) => {
-            const active = isActive(tab.path);
-            const Icon = tab.icon;
-            const isAdd = tab.path === '/add';
-            return (
-              <li key={tab.name}>
-                <Link
-                  to={tab.path}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                    isAdd
-                      ? 'bg-primary text-white hover:bg-primaryDark shadow-blue'
-                      : active
-                      ? 'bg-primaryLight primary font-semibold'
-                      : 'text-secondary hover:bg-surface hover:text-primary'
-                  }`}
-                >
-                  <Icon size={18} strokeWidth={active || isAdd ? 2.5 : 2} />
-                  <span className="text-sm font-medium">{tab.name}</span>
-                  {active && !isAdd && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      <nav className="flex-1 px-3 space-y-0.5">
+        {/* Add Item — primary CTA */}
+        <Link
+          to="/add"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] bg-dark text-white mb-3 hover:opacity-90 transition-opacity"
+        >
+          <Plus size={16} strokeWidth={2.5} />
+          <span className="text-[13px] font-medium">Add Item</span>
+        </Link>
+
+        {TABS.map((tab) => {
+          const active = isActive(tab.path);
+          const Icon = tab.icon;
+          return (
+            <Link
+              key={tab.name}
+              to={tab.path}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-[10px] transition-colors relative ${
+                active
+                  ? 'bg-appbg text-dark font-medium'
+                  : 'text-secondary hover:bg-appbg hover:text-dark'
+              }`}
+            >
+              <Icon size={16} strokeWidth={active ? 2 : 1.5} />
+              <span className="text-[13px]">{tab.name}</span>
+              {tab.path === '/home' && conflictCount > 0 && (
+                <span className="ml-auto min-w-[18px] h-[18px] bg-orange text-white text-[10px] font-semibold rounded-badge flex items-center justify-center px-1">
+                  {conflictCount > 9 ? '9+' : conflictCount}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* User footer */}
-      <div className="px-5 py-4 border-t border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-primaryLight flex items-center justify-center">
-            <span className="primary font-bold text-sm">
-              {user.email?.charAt(0)?.toUpperCase() || 'U'}
-            </span>
+      <div className="px-4 pb-6 pt-3" style={{ borderTop: '1px solid rgba(0,0,0,0.07)' }}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-appbg border border-border flex items-center justify-center shrink-0">
+            <span className="text-dark font-semibold text-[11px]">{initials}</span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-primary truncate">{user.email?.split('@')[0]}</p>
-            <p className="text-[10px] text-secondary truncate">{user.email}</p>
+          <div className="min-w-0">
+            <p className="text-[12px] font-medium text-dark truncate">{user.email?.split('@')[0]}</p>
+            <p className="text-[10px] text-muted truncate">{user.email}</p>
           </div>
         </div>
       </div>

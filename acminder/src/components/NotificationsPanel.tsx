@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, Clock, X, Bell, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Conflict } from '../types';
 
@@ -7,9 +7,7 @@ function formatTime12(t: string) {
   const match = t.match(/^(\d{1,2}):(\d{2})/);
   if (!match) return t;
   const h = Number(match[1]);
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${match[2]} ${ampm}`;
+  return `${h % 12 === 0 ? 12 : h % 12}:${match[2]} ${h >= 12 ? 'PM' : 'AM'}`;
 }
 
 function overlapLabel(c: Conflict) {
@@ -29,45 +27,40 @@ export default function NotificationsPanel({ conflicts, onClose }: Props) {
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/20 z-40 animate-fadeIn"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="absolute top-11 right-0 w-[320px] max-w-[calc(100vw-2rem)] bg-surface rounded-bento z-50 animate-slideUp overflow-hidden"
+        style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.08)' }}>
 
-      {/* Panel */}
-      <div className="absolute top-14 right-4 w-[340px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-elevated border border-border z-50 animate-slideUp overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3"
+          style={{ borderBottom: '1px solid rgba(0,0,0,0.07)' }}>
           <div className="flex items-center gap-2">
-            <Bell size={16} className="primary" />
-            <h3 className="font-display font-bold text-sm text-primary">Notifications</h3>
+            <span className="text-[13px] font-semibold text-dark">Conflicts</span>
             {unresolved.length > 0 && (
-              <span className="bg-danger text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+              <span className="bg-orange text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-badge min-w-[18px] text-center">
                 {unresolved.length}
               </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-lg hover:bg-surface flex items-center justify-center transition-colors"
-          >
-            <X size={14} className="text-secondary" />
+          <button onClick={onClose} className="w-6 h-6 rounded-[6px] hover:bg-appbg flex items-center justify-center transition-colors">
+            <X size={13} className="text-muted" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="max-h-[360px] overflow-y-auto">
+        <div className="max-h-[340px] overflow-y-auto">
           {unresolved.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 px-4">
-              <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mb-3">
-                <CheckCircle2 size={24} className="text-success" strokeWidth={1.5} />
+            <div className="flex flex-col items-center py-10 px-4 gap-2">
+              <div className="w-10 h-10 rounded-[12px] bg-appbg flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A8A8A8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
               </div>
-              <p className="text-sm font-semibold text-primary mb-1">All caught up!</p>
-              <p className="text-xs text-secondary text-center">No schedule conflicts to worry about.</p>
+              <p className="text-[13px] font-medium text-dark">All caught up</p>
+              <p className="text-[12px] text-muted text-center">No schedule conflicts to worry about.</p>
             </div>
           ) : (
-            <div className="py-1">
+            <div className="p-2 space-y-1">
               {unresolved.map((c) => {
                 const isCritical = c.severity !== 'minor';
                 const dateStr = c.date || '';
@@ -75,36 +68,24 @@ export default function NotificationsPanel({ conflicts, onClose }: Props) {
                 return (
                   <button
                     key={c.id}
-                    onClick={() => {
-                      navigate(`/conflict/${c.id}`);
-                      onClose();
-                    }}
-                    className="w-full flex items-start gap-3 px-4 py-3 hover:bg-surface/60 transition-colors text-left border-b border-border/50 last:border-0"
+                    onClick={() => { navigate(`/conflict/${c.id}`); onClose(); }}
+                    className="w-full flex items-start gap-3 px-3 py-2.5 hover:bg-appbg rounded-[10px] transition-colors text-left"
                   >
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${isCritical ? 'bg-red-50' : 'bg-warning/10'}`}>
-                      <AlertTriangle size={14} className={isCritical ? 'text-danger' : 'text-warning'} />
+                    <div className={`w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0 mt-0.5 ${
+                      isCritical ? 'bg-orange/10' : 'bg-dark/5'
+                    }`}>
+                      <AlertTriangle size={13} className={isCritical ? 'text-orange' : 'text-muted'} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-primary leading-snug">
+                      <p className="text-[12px] font-medium text-dark leading-snug">
                         {c.item_a.title}
-                        <span className="text-secondary font-normal mx-1">vs</span>
+                        <span className="text-muted font-normal mx-1"> vs </span>
                         {c.item_b.title}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        {dateStr && (
-                          <span className="text-[10px] text-secondary">
-                            {format(new Date(`${dateStr}T00:00:00`), 'MMM d')}
-                          </span>
-                        )}
-                        {overlap && (
-                          <span className="text-[10px] primary flex items-center gap-0.5">
-                            <Clock size={8} /> {overlap}
-                          </span>
-                        )}
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isCritical ? 'bg-red-50 text-danger' : 'bg-warning/10 text-warning'}`}>
-                          {isCritical ? 'Conflict' : 'Tight'}
-                        </span>
-                      </div>
+                      <p className="text-[10px] text-muted mt-0.5">
+                        {dateStr && format(new Date(`${dateStr}T00:00:00`), 'MMM d')}
+                        {overlap && ` · ${overlap}`}
+                      </p>
                     </div>
                   </button>
                 );
@@ -112,21 +93,6 @@ export default function NotificationsPanel({ conflicts, onClose }: Props) {
             </div>
           )}
         </div>
-
-        {/* Footer */}
-        {unresolved.length > 0 && (
-          <div className="px-4 py-3 border-t border-border bg-surface/30">
-            <button
-              onClick={() => {
-                navigate('/home?tab=suggestions');
-                onClose();
-              }}
-              className="w-full text-center text-xs font-semibold primary hover:primaryDark transition-colors"
-            >
-              View all conflicts →
-            </button>
-          </div>
-        )}
       </div>
     </>
   );

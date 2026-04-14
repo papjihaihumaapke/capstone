@@ -7,8 +7,10 @@ export default function AppLayout() {
     <div className="min-h-dvh bg-appbg">
       <SidebarNav className="hidden lg:flex" />
       <BottomNav className="flex lg:hidden" />
-      <main className="lg:ml-[220px] pb-24 lg:pb-0 overflow-x-hidden">
-        <Outlet />
+      <main className="lg:ml-[220px] pb-24 lg:pb-0 min-h-dvh">
+        <div className="max-w-content mx-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

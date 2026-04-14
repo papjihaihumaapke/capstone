@@ -18,54 +18,48 @@
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-sans;
-    font-weight: 500;
-    line-height: 1.3;
-  }
-
-  /* Never allow font-weight above 500 */
-  b, strong {
-    font-weight: 500;
+    font-weight: 600;
+    line-height: 1.2;
   }
 }
 
 @layer components {
-  /* ── Card base ── */
+  /* ── Bento tile ── */
+  .bento-tile {
+    @apply bg-surface rounded-bento p-5;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.06);
+  }
+  .bento-tile-sm {
+    @apply bg-surface rounded-bento p-4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.06);
+  }
+
+  /* ── Legacy card ── */
   .card {
     @apply bg-surface rounded-card p-5;
-    border: 0.5px solid rgba(0,0,0,0.10);
+    border: 0.5px solid rgba(0,0,0,0.08);
   }
 
   /* ── Primary CTA button ── */
   .btn-primary {
-    @apply bg-accent text-white rounded-btn h-btn px-6 font-medium text-body
+    @apply bg-dark text-white rounded-btn h-btn px-6 font-medium text-body
            transition-all duration-150 ease-out;
     border: none;
     cursor: pointer;
   }
-  .btn-primary:hover {
-    opacity: 0.92;
-  }
-  .btn-primary:active {
-    transform: scale(0.98);
-  }
-  .btn-primary:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
+  .btn-primary:hover { opacity: 0.90; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 
   /* ── Secondary button ── */
   .btn-secondary {
-    @apply bg-surface text-accent rounded-btn h-btn px-6 font-medium text-body
+    @apply bg-surface text-dark rounded-btn h-btn px-6 font-medium text-body
            transition-all duration-150 ease-out;
-    border: 0.5px solid #6C63FF;
+    border: 1px solid rgba(0,0,0,0.12);
     cursor: pointer;
   }
-  .btn-secondary:hover {
-    background: #EEEDFE;
-  }
-  .btn-secondary:active {
-    transform: scale(0.98);
-  }
+  .btn-secondary:hover { background: #f5f4f1; }
+  .btn-secondary:active { transform: scale(0.98); }
 
   /* ── Google OAuth button ── */
   .btn-google {
@@ -74,12 +68,8 @@
     border: 1px solid #dadce0;
     cursor: pointer;
   }
-  .btn-google:hover {
-    background: #f8f8f8;
-  }
-  .btn-google:active {
-    transform: scale(0.98);
-  }
+  .btn-google:hover { background: #f8f8f8; }
+  .btn-google:active { transform: scale(0.98); }
 
   /* ── Priority left border accents ── */
   .priority-border-critical { border-left: 3px solid #E55B45; }
@@ -91,12 +81,12 @@
   /* ── Skeleton shimmer ── */
   .skeleton {
     @apply rounded-btn;
-    background: linear-gradient(90deg, #E8E8E8 25%, #F2F2F2 50%, #E8E8E8 75%);
+    background: linear-gradient(90deg, #E8E8E4 25%, #F0EFEB 50%, #E8E8E4 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite linear;
   }
 
-  /* ── Twilio pulse ring (1h alert) ── */
+  /* ── Twilio pulse ring ── */
   .pulse-ring {
     position: relative;
   }
@@ -110,7 +100,7 @@
     pointer-events: none;
   }
 
-  /* ── Active nav indicator ── */
+  /* ── Sidebar active indicator ── */
   .nav-active-bar {
     position: relative;
   }
@@ -121,33 +111,26 @@
     top: 8px;
     bottom: 8px;
     width: 3px;
-    background: #6C63FF;
+    background: #1A1A1A;
     border-radius: 0 3px 3px 0;
   }
 }
 
 @layer utilities {
-  /* Hide scrollbar utility */
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-  /* Text weight helpers (enforce 400/500 only) */
-  .font-normal { font-weight: 400 !important; }
-  .font-medium { font-weight: 500 !important; }
+  .font-normal   { font-weight: 400 !important; }
+  .font-medium   { font-weight: 500 !important; }
+  .font-semibold { font-weight: 600 !important; }
+  .font-bold     { font-weight: 700 !important; }
 }
 
-/* ── Accessibility: Focus rings ── */
+/* ── Accessibility ── */
 :focus-visible {
-  outline: 2px solid #6C63FF;
+  outline: 2px solid #1A1A1A;
   outline-offset: 2px;
 }
 
-/* ── Checkbox accent ── */
-input[type="checkbox"] {
-  accent-color: #6C63FF;
-}
-
-/* ── Toggle switch ── */
-input[type="range"] {
-  accent-color: #6C63FF;
-}
+input[type="checkbox"] { accent-color: #1A1A1A; }
+input[type="range"]    { accent-color: #1A1A1A; }
