@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Trash2, Pencil, Calendar, Clock, MapPin, Briefcase, BookOpen, FileText } from 'lucide-react';
+import { Trash2, Pencil, Calendar, Clock, MapPin, Briefcase, BookOpen, FileText, X, ArrowLeft } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 function formatTime12(timeStr: string | undefined) {
@@ -10,18 +10,32 @@ function formatTime12(timeStr: string | undefined) {
   const match = t.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return t;
   const h24 = Number(match[1]);
-  const mins = match[2];
   if (Number.isNaN(h24)) return t;
-  const ampm = h24 >= 12 ? 'PM' : 'AM';
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  return `${h12}:${mins} ${ampm}`;
+  return `${h12}:${match[2]} ${h24 >= 12 ? 'PM' : 'AM'}`;
 }
 
 function formatDateLabel(dateStr: string | undefined) {
   if (!dateStr) return '';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
 }
+
+const inputCls = [
+  'w-full px-4 py-3 rounded-[10px] bg-white text-[14px] text-[#1A1A1A]',
+  'placeholder:text-[#AAAAAA] outline-none transition-all',
+  'focus:ring-2 focus:ring-[#1A1A1A]/10',
+].join(' ');
+const inputBorder  = { border: '1px solid rgba(0,0,0,0.14)' };
+const inputErrBorder = { border: '1px solid #E55B45' };
+
+const TYPE_CONFIG: Record<string, { label: string; Icon: any; badgeBg: string; badgeColor: string }> = {
+  shift:      { label: 'Work',    Icon: Briefcase, badgeBg: '#F2F2EF', badgeColor: '#1A1A1A' },
+  class:      { label: 'College', Icon: BookOpen,  badgeBg: '#F2F2EF', badgeColor: '#1A1A1A' },
+  assignment: { label: 'Task',    Icon: FileText,  badgeBg: '#1A1A1A', badgeColor: '#FFFFFF' },
+  routine:    { label: 'Habit',   Icon: Clock,     badgeBg: '#F2F2EF', badgeColor: '#1A1A1A' },
+};
 
 export default function ItemDetail() {
   const { id } = useParams();
@@ -34,243 +48,292 @@ export default function ItemDetail() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (!item) fetchItems?.();
-  }, [item, fetchItems]);
+  useEffect(() => { if (!item) fetchItems?.(); }, [item]);
 
   useEffect(() => {
     if (!item) return;
     const i = item as any;
     setDraft({
-      title: i.title,
-      date: i.date,
-      start_time: i.start_time,
-      end_time: i.end_time,
-      location: i.location || '',
-      role: i.role || '',
+      title: i.title, date: i.date,
+      start_time: i.start_time, end_time: i.end_time,
+      location: i.location || '', role: i.role || '',
       repeats_weekly: !!i.repeats_weekly,
-      due_date: i.due_date,
-      due_time: i.due_time,
-      course: i.course || '',
-      category: i.category || 'other',
+      due_date: i.due_date, due_time: i.due_time,
+      course: i.course || '', category: i.category || 'other',
     });
     setErrors({});
   }, [item]);
 
   if (!id) return null;
-  if (!item) return <div className="p-10 text-center text-sm text-muted animate-pulse">Loading item details…</div>;
+  if (!item) return (
+    <div className="min-h-screen bg-[rgba(0,0,0,0.4)] flex items-center justify-center">
+      <p className="text-white text-[14px] opacity-70">Loading…</p>
+    </div>
+  );
 
-  const handleBack = () => {
-    if (isEditing) setIsEditing(false);
-    else navigate(-1);
-  };
+  const cfg = TYPE_CONFIG[item.type] || TYPE_CONFIG.shift;
+  const isAssignment = item.type === 'assignment';
+
+  const handleBack = () => { if (isEditing) setIsEditing(false); else navigate(-1); };
 
   const onSave = async () => {
-    if (!updateItem) return;
-    const newErrors: Record<string, string> = {};
-    if (!draft.title?.trim()) newErrors.title = 'Title is required';
-    if (item.type !== 'assignment' && draft.start_time && draft.end_time && draft.end_time <= draft.start_time) {
-      newErrors.end_time = 'End time must be after start time';
-    }
-    if (item.type === 'assignment' && !draft.due_date) newErrors.due_date = 'Due date required';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
+    const errs: Record<string, string> = {};
+    if (!draft.title?.trim()) errs.title = 'Title is required';
+    if (!isAssignment && draft.start_time && draft.end_time && draft.end_time <= draft.start_time)
+      errs.end_time = 'End time must be after start time';
+    if (isAssignment && !draft.due_date) errs.due_date = 'Due date required';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setSaving(true);
     try {
-      await updateItem(id, draft);
+      await updateItem!(id, draft);
       showToast?.('Changes saved');
       setIsEditing(false);
     } catch (e: any) {
       showToast?.(e?.message || 'Failed to save');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const onDelete = async () => {
-    if (!deleteItem) return;
     if (!window.confirm('Delete this item? This cannot be undone.')) return;
     setSaving(true);
     try {
-      await deleteItem(id);
+      await deleteItem!(id);
       showToast?.('Item deleted');
       navigate('/home');
     } catch (e: any) {
       showToast?.(e?.message || 'Failed to delete');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
-  const isAssignment = item.type === 'assignment';
-
-  const typeConfig: Record<string, any> = {
-    shift: { label: 'Work', bg: 'bg-dark/5', color: 'text-dark', Icon: Briefcase },
-    class: { label: 'College', bg: 'bg-dark/5', color: 'text-dark', Icon: BookOpen },
-    assignment: { label: 'Task', bg: 'bg-surface', border: 'border border-dark', color: 'text-dark', Icon: FileText },
-    routine: { label: 'Habit', bg: 'bg-dark/5', color: 'text-dark', Icon: Clock },
-  };
-  const cfg = typeConfig[item.type] || typeConfig.shift;
-  const headerTag = cfg.border ? `${cfg.bg} ${cfg.border} ${cfg.color}` : `${cfg.bg} ${cfg.color}`;
-
-  const renderFormInput = (label: string, field: string, type = 'text', placeholder?: string) => (
-    <div className="mb-4 w-full">
-      <label className="block text-caption font-semibold text-dark mb-1">{label}</label>
+  const Field = ({ label: fld, field, type = 'text', placeholder }: { label: string; field: string; type?: string; placeholder?: string }) => (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[12px] font-medium text-[#6B6B6B]">{fld}</label>
       <input
         type={type}
         placeholder={placeholder}
         value={draft[field] || ''}
-        onChange={(e) => setDraft({...draft, [field]: e.target.value})}
-        className={`w-full px-4 py-3 rounded-input border bg-surface text-body text-dark font-body placeholder:text-muted focus:outline-none focus:ring-0 transition-colors ${
-          errors[field] ? 'border-orange focus:border-orange' : 'border-border focus:border-dark'
-        }`}
+        onChange={(e) => setDraft({ ...draft, [field]: e.target.value })}
+        className={inputCls}
+        style={errors[field] ? inputErrBorder : inputBorder}
       />
-      {errors[field] && <p className="text-caption text-orange mt-1">{errors[field]}</p>}
+      {errors[field] && <p className="text-[12px] text-[#E55B45]">{errors[field]}</p>}
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-dark/40 backdrop-blur-sm flex flex-col justify-end animate-fadeIn">
-      {/* Background click to close */}
-      <div 
-        className="flex-1 w-full"
-        onClick={handleBack} 
-        style={{ cursor: 'pointer' }}
-      />
+    /* ── Overlay ── */
+    <div
+      className="fixed inset-0 z-50 flex flex-col lg:items-center lg:justify-center animate-fadeIn"
+      style={{ background: 'rgba(0,0,0,0.45)' }}
+    >
+      {/* Click outside to close */}
+      <div className="absolute inset-0" onClick={handleBack} />
 
-      {/* Bottom Sheet Modal */}
-      <div className="bg-surface rounded-t-[24px] w-full max-w-[480px] mx-auto px-5 pt-3 pb-8 max-h-[90vh] overflow-y-auto no-scrollbar relative flex flex-col">
-        
-        {/* Drag handle */}
-        <div className="w-12 h-1.5 bg-border rounded-full mx-auto flex-shrink-0 mb-5" />
-
-        <div className="flex justify-between items-center mb-6">
-           <h1 className="text-h3 text-dark font-display">{isEditing ? 'Edit Item' : 'Item Details'}</h1>
-           {!isEditing && (
-             <button onClick={onDelete} className="w-9 h-9 rounded-full bg-peach text-orange flex items-center justify-center hover:bg-orange/20 transition-colors shadow-none cursor-pointer">
-               <Trash2 size={16} />
-             </button>
-           )}
+      {/* ── Sheet / Modal ── */}
+      <div
+        className={[
+          /* shared */
+          'relative z-10 bg-white w-full overflow-y-auto no-scrollbar',
+          /* mobile: bottom sheet */
+          'rounded-t-[24px] max-h-[92dvh]',
+          /* desktop: centered card */
+          'lg:rounded-[20px] lg:max-w-[480px] lg:max-h-[85dvh] lg:mx-4',
+        ].join(' ')}
+        style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}
+      >
+        {/* Drag handle (mobile only) */}
+        <div className="lg:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(0,0,0,0.15)' }} />
         </div>
 
-        {!isEditing ? (
-          <>
-            <div className={`px-2.5 py-0.5 rounded-badge text-[10px] font-bold uppercase tracking-wider w-fit mb-3 ${headerTag}`}>
-              {cfg.label}
+        <div className="px-6 pt-4 pb-8">
+
+          {/* ── Header row ── */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              {/* Desktop back / mobile is drag handle */}
+              <button
+                onClick={handleBack}
+                className="hidden lg:flex w-8 h-8 rounded-[8px] items-center justify-center hover:bg-[#F2F2EF] transition-colors"
+              >
+                <ArrowLeft size={16} className="text-[#1A1A1A]" />
+              </button>
+              <h1 className="text-[17px] font-semibold text-[#1A1A1A]">
+                {isEditing ? 'Edit Item' : 'Item Details'}
+              </h1>
             </div>
 
-            <h2 className="text-h2 font-display text-dark mb-4">{item.title}</h2>
+            <div className="flex items-center gap-2">
+              {!isEditing && (
+                <button
+                  onClick={onDelete}
+                  className="w-8 h-8 rounded-[8px] flex items-center justify-center hover:bg-[#FDF1EF] transition-colors"
+                  title="Delete item"
+                >
+                  <Trash2 size={15} className="text-[#E55B45]" />
+                </button>
+              )}
+              <button
+                onClick={handleBack}
+                className="w-8 h-8 rounded-[8px] flex items-center justify-center hover:bg-[#F2F2EF] transition-colors"
+              >
+                <X size={15} className="text-[#6B6B6B]" />
+              </button>
+            </div>
+          </div>
 
-            <div className="flex flex-col gap-3 mb-6">
-              <div className="flex items-center gap-3 text-body font-medium text-muted">
-                <Calendar size={18} className="text-dark" />
-                {formatDateLabel(isAssignment ? (item as any).due_date : item.date)}
+          {/* ══ VIEW MODE ══════════════════════════════════════ */}
+          {!isEditing && (
+            <>
+              {/* Type badge */}
+              <div className="flex items-center gap-2 mb-4">
+                <span
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                  style={{ background: cfg.badgeBg, color: cfg.badgeColor }}
+                >
+                  <cfg.Icon size={11} />
+                  {cfg.label}
+                </span>
+                {item.completed && (
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                    style={{ background: '#EFEEEA', color: '#6B6B6B' }}>
+                    Completed
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-3 text-body font-medium text-muted">
-                <Clock size={18} className="text-dark" />
-                {isAssignment 
-                  ? `Due ${formatTime12((item as any).due_time || '23:59')}` 
-                  : `${formatTime12(item.start_time)} \u2013 ${formatTime12(item.end_time)}`}
+
+              {/* Title */}
+              <h2 className="text-[22px] font-semibold text-[#1A1A1A] leading-tight mb-5">
+                {item.title}
+              </h2>
+
+              {/* Detail rows */}
+              <div className="space-y-0 rounded-[14px] overflow-hidden"
+                style={{ border: '1px solid rgba(0,0,0,0.08)' }}>
+                {[
+                  {
+                    Icon: Calendar,
+                    label: 'Date',
+                    value: formatDateLabel(isAssignment ? (item as any).due_date : item.date),
+                  },
+                  {
+                    Icon: Clock,
+                    label: isAssignment ? 'Due' : 'Time',
+                    value: isAssignment
+                      ? `Due ${formatTime12((item as any).due_time || '23:59')}`
+                      : `${formatTime12(item.start_time)} – ${formatTime12(item.end_time)}`,
+                  },
+                  (item as any).location && {
+                    Icon: MapPin, label: 'Location', value: (item as any).location,
+                  },
+                  (item as any).course && {
+                    Icon: BookOpen, label: 'Course', value: (item as any).course,
+                  },
+                  (item as any).role && {
+                    Icon: Briefcase, label: 'Role', value: (item as any).role,
+                  },
+                ].filter(Boolean).map((row: any, i, arr) => (
+                  <div
+                    key={row.label}
+                    className="flex items-center gap-3 px-4 py-3.5 bg-white"
+                    style={i < arr.length - 1 ? { borderBottom: '1px solid rgba(0,0,0,0.07)' } : {}}
+                  >
+                    <div className="w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0"
+                      style={{ background: '#F2F2EF' }}>
+                      <row.Icon size={14} style={{ color: '#6B6B6B' }} />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium" style={{ color: '#A8A8A8' }}>{row.label}</p>
+                      <p className="text-[14px] font-medium" style={{ color: '#1A1A1A' }}>{row.value}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              {(item as any).location && (
-                <div className="flex items-center gap-3 text-body font-medium text-muted">
-                  <MapPin size={18} className="text-dark" />
-                  {(item as any).location}
-                </div>
-              )}
-              {(item as any).course && (
-                <div className="flex items-center gap-3 text-body font-medium text-muted">
-                  <BookOpen size={18} className="text-dark" />
-                  {(item as any).course}
-                </div>
-              )}
-              {(item as any).role && (
-                <div className="flex items-center gap-3 text-body font-medium text-muted">
-                  <Briefcase size={18} className="text-dark" />
-                  {(item as any).role}
-                </div>
-              )}
-            </div>
+              {/* Edit button */}
+              <button
+                onClick={() => setIsEditing(true)}
+                className="w-full mt-5 py-3.5 rounded-[12px] text-[14px] font-medium flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ background: '#1A1A1A', color: '#FFFFFF' }}
+              >
+                <Pencil size={15} /> Edit Item
+              </button>
+            </>
+          )}
 
-            <div className="mt-2 text-center text-caption text-muted flex items-center justify-center gap-2">
-              <div className="w-1.5 h-1.5 bg-border rounded-full" />
-              {item.completed ? 'Completed' : 'To do'}
-              <div className="w-1.5 h-1.5 bg-border rounded-full" />
-            </div>
+          {/* ══ EDIT MODE ══════════════════════════════════════ */}
+          {isEditing && (
+            <div className="space-y-4">
+              <Field label="Title" field="title" placeholder="Item title" />
 
-            <button
-               onClick={() => setIsEditing(true)}
-               className="w-full bg-dark text-white py-3.5 rounded-btn text-body font-semibold mt-4 flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all outline-none"
-             >
-               <Pencil size={18} /> Edit Item
-             </button>
-          </>
-        ) : (
-          /* EDIT MODE */
-          <>
-            {renderFormInput('TITLE', 'title')}
-
-            {!isAssignment ? (
-              <>
+              {!isAssignment ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Date" field="date" type="date" />
+                    <div />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Start Time" field="start_time" type="time" />
+                    <Field label="End Time"   field="end_time"   type="time" />
+                  </div>
+                </>
+              ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  {renderFormInput('DATE', 'date', 'date')}
-                  <div />
+                  <Field label="Due Date" field="due_date" type="date" />
+                  <Field label="Due Time" field="due_time" type="time" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {renderFormInput('START TIME', 'start_time', 'time')}
-                  {renderFormInput('END TIME', 'end_time', 'time')}
-                </div>
-              </>
-            ) : (
+              )}
+
               <div className="grid grid-cols-2 gap-3">
-                 {renderFormInput('DUE DATE', 'due_date', 'date')}
-                 {renderFormInput('DUE TIME', 'due_time', 'time')}
+                <Field label="Location" field="location" placeholder="Optional" />
+                <Field
+                  label={item.type === 'shift' ? 'Role' : 'Course'}
+                  field={item.type === 'shift' ? 'role' : 'course'}
+                  placeholder="Optional"
+                />
               </div>
-            )}
 
-            <div className="grid grid-cols-2 gap-3">
-               {renderFormInput('LOCATION', 'location')}
-               {renderFormInput(item.type === 'shift' ? 'ROLE' : item.type === 'routine' ? 'CATEGORY' : 'COURSE', item.type === 'shift' ? 'role' : 'course')}
+              {item.type === 'class' && (
+                <label className="flex items-center gap-3 cursor-pointer py-1">
+                  <div
+                    className="w-5 h-5 rounded-[5px] flex items-center justify-center transition-all shrink-0"
+                    style={{
+                      background: draft.repeats_weekly ? '#1A1A1A' : 'transparent',
+                      border: draft.repeats_weekly ? '1px solid #1A1A1A' : '1px solid rgba(0,0,0,0.20)',
+                    }}
+                    onClick={() => setDraft({ ...draft, repeats_weekly: !draft.repeats_weekly })}
+                  >
+                    {draft.repeats_weekly && (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-[14px] font-medium text-[#1A1A1A]">Repeats every week</span>
+                </label>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 py-3.5 rounded-[12px] text-[14px] font-medium transition-colors"
+                  style={{ background: '#F2F2EF', color: '#1A1A1A' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onSave}
+                  disabled={saving}
+                  className="flex-1 py-3.5 rounded-[12px] text-[14px] font-medium transition-all active:scale-[0.98] disabled:opacity-40"
+                  style={{ background: '#1A1A1A', color: '#FFFFFF' }}
+                >
+                  {saving ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
             </div>
-
-            {item.type === 'class' && (
-               <label className="flex items-center gap-3 cursor-pointer py-2 mb-4">
-               <div className={`w-5 h-5 rounded-[4px] border flex items-center justify-center transition-all ${draft.repeats_weekly ? 'bg-dark border-dark' : 'border-border'}`}
-                 onClick={() => setDraft({...draft, repeats_weekly: !draft.repeats_weekly})}>
-                 {draft.repeats_weekly && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
-               </div>
-               <input
-                 type="checkbox"
-                 checked={draft.repeats_weekly}
-                 onChange={(e) => setDraft({...draft, repeats_weekly: e.target.checked})}
-                 className="sr-only"
-               />
-               <span className="text-body text-dark font-medium">Repeats every week</span>
-             </label>
-            )}
-
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={() => setIsEditing(false)}
-                className="flex-1 bg-surface border border-border text-dark py-3.5 rounded-btn font-semibold hover:bg-appbg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={onSave}
-                disabled={saving}
-                className="flex-1 bg-dark text-white py-3.5 rounded-btn font-semibold disabled:opacity-50 active:scale-95 transition-all"
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
