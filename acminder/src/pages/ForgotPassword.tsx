@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MailCheck } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import { supabase } from '../lib/supabase';
+
+const inputCls = 'w-full border border-[rgba(0,0,0,0.14)] rounded-[10px] px-4 py-3 text-[14px] text-[#1A1A1A] bg-white outline-none transition-all placeholder:text-[#AAAAAA] focus:ring-2 focus:ring-[#1A1A1A]/10';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -31,50 +32,57 @@ export default function ForgotPassword() {
   };
 
   return (
-    <AuthLayout backPath="/login" title="Reset password" subtitle="Link sent to your email">
+    <AuthLayout backPath="/login" title="Reset password" subtitle="We'll send you a link">
       {sent ? (
-        <div className="flex flex-col gap-6 items-center text-center py-6">
-          <div className="w-16 h-16 rounded-badge bg-appbg border border-border flex items-center justify-center">
-            <MailCheck size={32} className="text-dark" />
+        <div className="flex flex-col gap-5 items-center text-center py-4">
+          <div className="w-14 h-14 rounded-[16px] bg-dark/5 flex items-center justify-center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1A1A1A" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/>
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              <path d="m16 19 2 2 4-4"/>
+            </svg>
           </div>
           <div>
-            <h3 className="text-h3 font-display text-dark mb-2">Check your inbox</h3>
-            <p className="text-caption text-secondary">A reset link has been sent to <span className="font-bold text-dark">{email}</span>.</p>
+            <h3 className="text-[18px] font-semibold text-dark mb-2">Check your inbox</h3>
+            <p className="text-[13px] text-secondary leading-relaxed">
+              A reset link was sent to{' '}
+              <strong className="text-dark font-medium">{email}</strong>.
+            </p>
           </div>
           <button
             onClick={() => navigate('/login')}
-            className="w-full bg-dark text-white py-4 rounded-btn font-display font-bold active:scale-[0.98] transition shadow-none uppercase tracking-widest"
+            className="w-full bg-dark text-white py-3.5 rounded-[12px] text-[14px] font-medium hover:opacity-90 active:scale-[0.98] transition-all"
           >
             Back to Login
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-2">
-            <label className="text-label font-bold text-muted uppercase tracking-wider">Email address</label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[12px] font-medium text-secondary">Email address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              className="w-full border border-border rounded-btn px-4 py-3.5 text-body text-dark bg-surface outline-none transition-all placeholder:text-muted/40"
+              className={inputCls}
             />
           </div>
+
+          {error && (
+            <div className="px-3.5 py-3 bg-peach text-orange text-[13px] rounded-[10px] border border-peachborder">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-dark text-white py-4 rounded-btn font-display font-bold disabled:opacity-30 active:scale-[0.98] transition shadow-none mt-2 uppercase tracking-widest"
+            className="w-full bg-dark text-white py-3.5 rounded-[12px] text-[14px] font-medium mt-1 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40"
           >
-            {loading ? 'Sending...' : 'Send Reset Link'}
+            {loading ? 'Sending…' : 'Send Reset Link'}
           </button>
-
-          {error && (
-            <div className="p-4 bg-peach text-orange text-caption font-bold rounded-btn text-center border border-peachborder">
-              {error}
-            </div>
-          )}
         </form>
       )}
     </AuthLayout>

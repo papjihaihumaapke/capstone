@@ -1,102 +1,133 @@
 import { useNavigate } from 'react-router-dom';
-import { Zap, Shield, Sparkles } from 'lucide-react';
+import { Zap, Brain, ShieldCheck } from 'lucide-react';
 
 const FEATURES = [
-  { Icon: Zap, label: 'Instant Detection', bg: 'bg-orange/10', text: 'text-orange' },
-  { Icon: Sparkles, label: 'AI Suggestions', bg: 'bg-dark/5', text: 'text-dark' },
-  { Icon: Shield, label: 'Conflict-Free', bg: 'bg-dark/5', text: 'text-dark' },
+  { Icon: Zap,         label: 'Instant Detection' },
+  { Icon: Brain,       label: 'AI Suggestions'    },
+  { Icon: ShieldCheck, label: 'Conflict-Free'      },
 ];
+
+// Mini preview card shown on both mobile and desktop
+function PreviewCard() {
+  return (
+    <div className="bento-tile space-y-2.5 w-full max-w-[340px]">
+      <p className="text-[11px] font-semibold text-muted uppercase tracking-widest mb-3">Today's Schedule</p>
+
+      {/* Conflict items */}
+      {[
+        { title: 'Store Shift',    meta: '9:00 – 1:00 PM · Work',             conflict: true  },
+        { title: 'College Class',  meta: '11:00 AM – 1:00 PM · Room 204',      conflict: true  },
+        { title: 'Final Essay',    meta: 'Friday · Task',                      conflict: false },
+      ].map(item => (
+        <div key={item.title}
+          className={`flex items-center justify-between px-3.5 py-3 rounded-[12px] ${
+            item.conflict
+              ? 'bg-peach border-l-2 border-orange'
+              : 'bg-appbg'
+          }`}
+        >
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-dark">{item.title}</p>
+            <p className={`text-[11px] mt-0.5 ${item.conflict ? 'text-orange/70' : 'text-muted'}`}>{item.meta}</p>
+          </div>
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-badge ml-3 shrink-0 ${
+            item.conflict ? 'bg-orange/15 text-orange' : 'bg-dark/8 text-muted'
+          }`}>
+            {item.conflict ? 'Overlap' : 'Task'}
+          </span>
+        </div>
+      ))}
+
+      {/* Conflict banner */}
+      <div className="flex items-center gap-2 bg-orange/8 rounded-[10px] px-3.5 py-2.5 mt-1">
+        <div className="w-1.5 h-1.5 rounded-full bg-orange shrink-0" />
+        <p className="text-[11px] font-medium text-orange">2 overlapping events detected</p>
+      </div>
+    </div>
+  );
+}
 
 export default function Splash() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col min-h-[100dvh] w-full max-w-[480px] mx-auto bg-appbg animate-fadeIn">
-      
-      {/* Hero Section */}
-      <div className="px-6 pt-24 pb-12 flex flex-col items-center text-center">
-        <div className="inline-flex items-center gap-2 bg-surface rounded-full px-4 py-2 mb-8 border border-border">
-          <div className="w-2 h-2 rounded-full bg-orange animate-pulse" />
-          <span className="text-dark text-[11px] font-bold uppercase tracking-widest">Acminder AI</span>
+    <div className="min-h-dvh bg-appbg flex flex-col lg:flex-row">
+
+      {/* ── Left / hero column ──────────────────────────────── */}
+      <div className="flex-1 flex flex-col justify-center px-6 lg:px-16 pt-16 lg:pt-0 max-w-[640px] mx-auto lg:mx-0">
+
+        {/* Logo */}
+        <div className="flex items-center gap-2 mb-10 lg:mb-12">
+          <div className="w-8 h-8 rounded-[10px] bg-dark flex items-center justify-center">
+            <span className="text-white font-semibold text-[13px]">A</span>
+          </div>
+          <span className="text-dark font-semibold text-[15px] tracking-tight">Acminder</span>
         </div>
 
-        <h1 className="text-h1 font-display text-dark leading-tight mb-4">
-          No More<br />
-          <span className="text-orange">Schedule</span><br />
-          Conflicts.
+        {/* Headline */}
+        <h1 className="text-[40px] lg:text-[52px] font-semibold text-dark leading-[1.05] tracking-tight mb-5">
+          No more<br />
+          <span className="text-orange">schedule</span><br />
+          conflicts.
         </h1>
 
-        <p className="text-body font-body text-secondary max-w-[280px] leading-relaxed">
+        <p className="text-[15px] text-secondary leading-relaxed mb-8 max-w-[320px]">
           Spot clashes between your college classes and work shifts before they become a problem.
         </p>
-      </div>
 
-      {/* Preview Graphic */}
-      <div className="px-6 -mt-2 relative z-10">
-        <div className="bg-surface rounded-card shadow-none border border-border p-5">
-          <div className="flex items-center justify-between mb-5">
-            <span className="text-label font-bold text-muted uppercase tracking-wider">Today's Schedule</span>
-            <div className="flex gap-1.5">
-               <div className="w-1.5 h-1.5 rounded-full bg-border" />
-               <div className="w-1.5 h-1.5 rounded-full bg-border" />
+        {/* Feature chips */}
+        <div className="flex flex-wrap gap-2 mb-10">
+          {FEATURES.map(({ Icon, label }) => (
+            <div key={label}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-badge bg-surface text-[12px] font-medium text-dark"
+              style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.08)' }}>
+              <Icon size={13} className="text-muted" />
+              {label}
             </div>
-          </div>
-          
-          <div className="space-y-3">
-            {/* Conflict Item */}
-            <div className="flex items-center gap-3 p-3.5 bg-peach rounded-card border border-peachborder">
-              <div className="flex-1 min-w-0">
-                <div className="text-bodybold text-dark truncate">Store Shift</div>
-                <div className="text-caption text-secondary mt-1">9:00 – 1:00 PM · Work</div>
-              </div>
-              <span className="text-[10px] bg-white border border-peachborder text-orange font-bold px-2 py-0.5 rounded-badge uppercase">Overlap</span>
-            </div>
+          ))}
+        </div>
 
-            {/* Conflict Item */}
-            <div className="flex items-center gap-3 p-3.5 bg-peach rounded-card border border-peachborder">
-              <div className="flex-1 min-w-0">
-                <div className="text-bodybold text-dark truncate">College Class</div>
-                <div className="text-caption text-secondary mt-1">11:00 AM – 1:00 PM · Room 204</div>
-              </div>
-              <span className="text-[10px] bg-white border border-peachborder text-orange font-bold px-2 py-0.5 rounded-badge uppercase">Overlap</span>
-            </div>
-
-            {/* Normal Item */}
-            <div className="flex items-center gap-3 p-3.5 bg-surface rounded-card border border-border">
-              <div className="flex-1 min-w-0">
-                <div className="text-bodybold text-dark truncate">Final Essay</div>
-                <div className="text-caption text-secondary mt-1">Friday · Tasks</div>
-              </div>
-              <span className="text-[10px] bg-appbg text-muted font-bold px-2 py-0.5 rounded-badge uppercase">Soon</span>
-            </div>
-          </div>
+        {/* CTA buttons */}
+        <div className="flex flex-col gap-3 max-w-[320px]">
+          <button
+            onClick={() => navigate('/onboarding')}
+            className="w-full py-3.5 bg-dark text-white rounded-[12px] text-[14px] font-semibold hover:opacity-90 active:scale-[0.98] transition-all"
+          >
+            Get Started
+          </button>
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full py-3.5 bg-surface text-dark rounded-[12px] text-[14px] font-medium hover:bg-border/30 active:scale-[0.98] transition-all"
+            style={{ boxShadow: '0 0 0 1px rgba(0,0,0,0.08)' }}
+          >
+            Sign in
+          </button>
         </div>
       </div>
 
-      {/* Feature Pills */}
-      <div className="flex gap-2.5 mt-10 px-6 justify-center flex-wrap">
-        {FEATURES.map(({ Icon, label, bg, text }) => (
-          <div key={label} className={`flex items-center gap-2 px-4 py-2.5 rounded-btn text-caption font-bold ${bg} ${text} border border-border/50`}>
-            <Icon size={14} />
-            {label}
+      {/* ── Right / preview column ──────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 lg:py-0 lg:bg-surface/60">
+        <div className="w-full max-w-[340px]">
+          {/* Floating label above card */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-2 h-2 rounded-full bg-orange animate-pulse" />
+            <span className="text-[12px] font-medium text-muted">Live conflict detection</span>
           </div>
-        ))}
-      </div>
-
-      {/* CTA Section */}
-      <div className="flex flex-col gap-3 mt-auto px-6 pb-12 pt-8">
-        <button
-          onClick={() => navigate('/onboarding')}
-          className="w-full py-4 bg-dark text-white rounded-btn font-display font-bold text-body transition-all active:scale-[0.98] hover:opacity-90 shadow-none uppercase tracking-widest"
-        >
-          Get Started
-        </button>
-        <button
-          onClick={() => navigate('/login')}
-          className="w-full text-center text-muted font-body text-caption py-2 hover:text-dark transition-colors font-bold uppercase tracking-widest"
-        >
-          Already registered? <span className="text-dark">Sign in</span>
-        </button>
+          <PreviewCard />
+          {/* Stats row below card */}
+          <div className="grid grid-cols-3 gap-2.5 mt-3">
+            {[
+              { n: '2s',   label: 'Scan time'   },
+              { n: '98%',  label: 'Accuracy'    },
+              { n: 'Free', label: 'Always'       },
+            ].map(s => (
+              <div key={s.label} className="bento-tile-sm text-center">
+                <p className="text-[16px] font-bold text-dark">{s.n}</p>
+                <p className="text-[10px] text-muted mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
