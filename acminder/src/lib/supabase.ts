@@ -21,20 +21,38 @@ export const getItems = async (userId: string): Promise<ScheduleItem[]> => {
 };
 
 export const ensureProfileExists = async (userId: string, email: string): Promise<boolean> => {
-  // Check if profile exists
+  // Check if a profile already exists for this user ID
   const { error } = await supabase
     .from('profiles')
     .select('id')
     .eq('id', userId)
     .single();
-    
-  // PGRST116 means zero rows returned
+
+  // PGRST116 = zero rows — this is a new user ID
   if (error && error.code === 'PGRST116') {
-    // Create the profile
+    // Before creating a new profile, check whether this email is already
+    // registered under a DIFFERENT user ID (e.g. email/password account).
+    // This happens when Google OAuth creates a new UUID for an existing email.
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existing && existing.id !== userId) {
+      // Sign out the duplicate OAuth session and surface a clear error
+      await supabase.auth.signOut();
+      throw new Error(
+        'An account with this email already exists. Please sign in with your email and password instead.'
+      );
+    }
+
+    // Safe to create the profile
     await supabase.from('profiles').insert({ id: userId, email });
-    return true; // Profile was just created (is new user)
+    return true; // New user
   }
-  return false; // Profile already existed
+
+  return false; // Profile already existed for this user ID
 };
 
 export const addItem = async (item: Omit<ScheduleItem, 'id' | 'created_at'>): Promise<ScheduleItem> => {

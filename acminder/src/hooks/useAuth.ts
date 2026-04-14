@@ -20,13 +20,18 @@ export function useAuth() {
       return true;
     } catch (err: unknown) {
       let msg = err instanceof Error ? err.message : 'Failed to sign up.';
-      // CAMA-69: Detect rate-limit errors and provide recovery guidance
       if (
         msg.toLowerCase().includes('rate limit') ||
         msg.toLowerCase().includes('too many requests') ||
         msg.includes('429')
       ) {
         msg = 'Too many sign-up attempts. Please wait 60 seconds before trying again.';
+      } else if (
+        msg.toLowerCase().includes('user already registered') ||
+        msg.toLowerCase().includes('already been registered') ||
+        msg.toLowerCase().includes('already exists')
+      ) {
+        msg = 'An account with this email already exists. Please sign in instead.';
       }
       setError(msg);
       return false;
@@ -60,7 +65,7 @@ export function useAuth() {
           redirectTo: `${window.location.origin}/home`,
           queryParams: {
             access_type: 'offline',
-            prompt: 'consent',
+            prompt: 'select_account',
           },
           scopes: 'https://www.googleapis.com/auth/calendar.readonly',
         },

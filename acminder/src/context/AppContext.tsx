@@ -164,7 +164,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Fire-and-forget: don't block the auth state change callback
       ensureProfileExists(sessionUser.id, sessionUser.email || '')
         .then((isNew) => { if (isNew) setIsNewUser(true); })
-        .catch((err) => console.error('Failed to ensure profile exists:', err));
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : 'Authentication error. Please try again.';
+          setToast({ message: msg, visible: true });
+        });
     };
 
     // Resolve the initial session first, then mark sessionChecked=true.
