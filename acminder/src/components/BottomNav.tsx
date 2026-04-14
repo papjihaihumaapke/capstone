@@ -1,70 +1,95 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 
 export default function BottomNav({ className = '' }: { className?: string }) {
   const location = useLocation();
+  const nav = useNavigate();
   const { user } = useAppContext();
   const p = location.pathname;
   if (!user) return null;
 
-  const iconColor = (active: boolean) => active ? '#0D0D0D' : '#BBBBBB';
-  const labelColor = (active: boolean) => active ? '#0D0D0D' : '#BBBBBB';
+  const isActive = (path: string) => p.startsWith(path);
+
+  const NavItem = ({ path, label, icon }: { path: string; label: string; icon: React.ReactNode }) => {
+    const active = isActive(path);
+    return (
+      <Link to={path} className="flex flex-col items-center gap-1 cursor-pointer no-underline">
+        <div className={`w-5 h-5 flex items-center justify-center ${active ? 'stroke-dark' : 'stroke-muted'}`}>
+          {icon}
+        </div>
+        <span className={`text-[10px] font-medium ${active ? 'text-dark' : 'text-muted'}`}>
+          {label}
+        </span>
+        {active && <div className="w-1 h-1 rounded-full bg-orange mt-0.5" />}
+      </Link>
+    );
+  };
 
   return (
-    <nav
-      className={className}
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: '#FFFFFF',
-        borderTop: '0.5px solid #F0F0F0',
-        padding: '12px 0 20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        zIndex: 30,
-        fontFamily: '-apple-system, "SF Pro Display", sans-serif',
-      }}
-    >
+    <nav className={`fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex items-center justify-around px-4 pt-3 pb-5 z-30 ${className}`}>
+      
       {/* Home */}
-      <Link to="/home" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor(p.startsWith('/home'))} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
-          <path d="M9 21V12h6v9"/>
-        </svg>
-        <span style={{ fontSize: 10, fontWeight: 500, color: labelColor(p.startsWith('/home')) }}>Home</span>
-      </Link>
+      <NavItem 
+        path="/home" 
+        label="Home" 
+        icon={
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/>
+            <path d="M9 21V12h6v9"/>
+          </svg>
+        } 
+      />
 
       {/* Calendar */}
-      <Link to="/calendar" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor(p.startsWith('/calendar'))} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/>
-          <line x1="8" y1="2" x2="8" y2="6"/>
-          <line x1="3" y1="10" x2="21" y2="10"/>
+      <NavItem 
+        path="/calendar" 
+        label="Calendar" 
+        icon={
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        } 
+      />
+
+      {/* Centre Add Button */}
+      <button
+        onClick={() => nav('/add')}
+        aria-label="Add item"
+        className="w-11 h-11 bg-dark rounded-btn -mt-4 flex items-center justify-center shrink-0 cursor-pointer shadow-none"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
-        <span style={{ fontSize: 10, fontWeight: 500, color: labelColor(p.startsWith('/calendar')) }}>Calendar</span>
-      </Link>
+      </button>
 
       {/* Profile */}
-      <Link to="/profile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor(p.startsWith('/profile'))} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="8" r="4"/>
-          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-        </svg>
-        <span style={{ fontSize: 10, fontWeight: 500, color: labelColor(p.startsWith('/profile')) }}>Profile</span>
-      </Link>
+      <NavItem 
+        path="/profile" 
+        label="Profile" 
+        icon={
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+          </svg>
+        } 
+      />
 
       {/* Settings */}
-      <Link to="/settings" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={iconColor(p.startsWith('/settings'))} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-        <span style={{ fontSize: 10, fontWeight: 500, color: labelColor(p.startsWith('/settings')) }}>Settings</span>
-      </Link>
+      <NavItem 
+        path="/settings" 
+        label="Settings" 
+        icon={
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        } 
+      />
+
     </nav>
   );
 }

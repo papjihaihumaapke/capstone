@@ -31,7 +31,6 @@ export function mapGoogleEventToItem(event: GoogleCalendarEvent, userId: string)
       end_time: endTime,
       location: event.location,
       repeats_weekly: false, // Google recurring events are handled as individual instances for now
-      external_id: event.id
     } as any;
   }
 
@@ -45,7 +44,6 @@ export function mapGoogleEventToItem(event: GoogleCalendarEvent, userId: string)
     location: event.location,
     repeats_weekly: false,
     course: event.summary,
-    external_id: event.id
   } as any;
 }
 

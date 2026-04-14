@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Upload, FileUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Upload, FileUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useState, useRef } from 'react';
 import { parseIcs, toDateString, toTimeString } from '../lib/ics';
@@ -45,7 +45,6 @@ export default function ImportSchedule() {
         repeats_weekly: false,
       }));
 
-      // Deduplicate against existing items
       const existingItems = (await fetchItems?.()) || [];
       const newItems = items.filter(newItem => {
         return !existingItems.some((existing: any) =>
@@ -60,216 +59,149 @@ export default function ImportSchedule() {
         showToast?.(`Imported ${inserted.length} new events.`);
         setImportedCount(inserted.length);
       } else {
-        showToast?.('No new events to import — all events already exist.');
+        showToast?.('No new events detected.');
         setImportedCount(0);
       }
 
       await fetchItems?.();
-
-      // Check for conflicts
       const latestItems = await fetchItems?.();
       if (latestItems && latestItems.length > 0) {
         const detected = calculateConflicts(latestItems);
         setPostImportConflicts(detected.length);
       }
     } catch (err: any) {
-      const msg = err?.message || 'Failed to import calendar file.';
-      showToast?.(msg);
+      showToast?.(err?.message || 'Failed to import calendar file.');
     } finally {
       setImporting(false);
     }
   };
 
   const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
+    e.preventDefault(); e.stopPropagation();
+    setDragActive(e.type === 'dragenter' || e.type === 'dragover');
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files?.[0]) {
-      setFile(e.dataTransfer.files[0]);
-    }
+    if (e.dataTransfer.files?.[0]) setFile(e.dataTransfer.files[0]);
   };
 
   return (
-    <div className="min-h-dvh flex flex-col bg-background">
-      <div className="max-w-lg lg:max-w-xl mx-auto w-full flex flex-col flex-1 px-4 lg:px-0">
+    <div className="min-h-[100dvh] flex flex-col bg-appbg animate-fadeIn pb-20">
+      <div className="max-w-[480px] mx-auto w-full px-5 pt-10">
+        
         {/* Header */}
-        <div className="pt-10 pb-6 flex items-center gap-3">
+        <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => navigate('/home')}
-            className="w-10 h-10 rounded-xl bg-white border border-border flex items-center justify-center shadow-card hover:border-primary/30 active:scale-95 transition-all"
-            aria-label="Go back"
+            className="w-9 h-9 rounded-btn bg-surface border border-border flex items-center justify-center cursor-pointer active:scale-95 transition-all text-dark"
           >
-            <ChevronLeft size={20} className="text-textSecondary" />
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-xl font-display font-semibold text-textPrimary">
-            Import <span className="text-primary">Calendar</span>
-          </h1>
+          <span className="text-h2 font-display text-dark">Import Calendar</span>
+          <div className="w-9" />
         </div>
 
-        <main className="flex-1 pb-8">
-          <p className="text-sm font-body text-textSecondary mb-6 leading-relaxed">
-            Upload a <strong className="text-textPrimary">.ics file</strong> exported from Google Calendar, Apple Calendar, or your school/work system. Events will be automatically categorized as classes, shifts, or tasks.
-          </p>
+        <p className="text-body font-body text-secondary mb-8 leading-relaxed">
+          Upload a <strong className="text-dark">.ics file</strong> from your Google or Apple calendar to sync your schedule instantly.
+        </p>
 
-          {/* How to export guide */}
-          <div className="bg-primaryLight rounded-2xl p-4 mb-6 border border-primary/10">
-            <p className="text-xs font-semibold text-primary mb-2">How to export your calendar:</p>
-            <ul className="text-xs text-textSecondary space-y-1.5">
-              <li className="flex items-start gap-2">
-                <span className="w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">G</span>
-                <span><strong className="text-textPrimary">Google:</strong> Settings → Import & Export → Export</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-4 h-4 rounded-full bg-textPrimary text-white text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">A</span>
-                <span><strong className="text-textPrimary">Apple:</strong> File → Export → Export…</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-4 h-4 rounded-full bg-accent text-white text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">O</span>
-                <span><strong className="text-textPrimary">Outlook:</strong> File → Open & Export → Import/Export</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* File Drop Zone */}
-          <div
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`relative rounded-2xl border-2 border-dashed p-8 text-center cursor-pointer transition-all ${
-              dragActive
-                ? 'border-primary bg-primaryLight scale-[1.01]'
-                : file
-                ? 'border-success bg-green-50'
-                : 'border-border bg-white hover:border-primary/40 hover:bg-primaryLight/30'
-            }`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".ics,text/calendar"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="sr-only"
-            />
-
-            {file ? (
-              <div className="animate-fadeIn">
-                <div className="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-3">
-                  <FileUp size={24} className="text-success" />
-                </div>
-                <p className="text-sm font-semibold text-textPrimary">{file.name}</p>
-                <p className="text-xs text-textSecondary mt-1">{(file.size / 1024).toFixed(1)} KB</p>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                  className="mt-2 text-xs text-danger font-semibold hover:underline"
-                >
-                  Remove
-                </button>
+        {/* Export Guide */}
+        <div className="bg-peach rounded-card border border-peachborder p-4 mb-8">
+          <div className="text-label font-bold text-peachtext uppercase tracking-widest mb-3">Quick Guide</div>
+          <div className="space-y-3">
+            {[
+              { label: 'Google', desc: 'Settings → Export', icon: 'G' },
+              { label: 'Apple', desc: 'File → Export', icon: 'A' },
+              { label: 'Outlook', desc: 'Export → .ics', icon: 'O' }
+            ].map(g => (
+              <div key={g.label} className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-badge bg-surface border border-peachborder/50 text-peachtext text-[10px] font-bold flex items-center justify-center uppercase tracking-widest">{g.icon}</div>
+                <div className="text-caption text-secondary"><strong className="text-peachtext">{g.label}:</strong> {g.desc}</div>
               </div>
-            ) : (
-              <div className="animate-fadeIn">
-                <div className="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center mx-auto mb-3">
-                  <Upload size={24} className="text-textSecondary" />
+            ))}
+          </div>
+        </div>
+
+        {/* Drop Zone */}
+        <div
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`relative rounded-card border-2 border-dashed p-10 text-center cursor-pointer transition-all ${
+            dragActive ? 'border-dark bg-surface scale-[1.01]' : file ? 'border-orange bg-surface focus:ring-4 ring-orange/10' : 'border-border bg-surface hover:border-dark'
+          }`}
+        >
+          <input ref={fileInputRef} type="file" accept=".ics,text/calendar" onChange={(e) => setFile(e.target.files?.[0] || null)} className="sr-only" />
+
+          {file ? (
+            <div className="animate-fadeIn">
+              <div className="w-12 h-12 rounded-badge bg-orange/10 flex items-center justify-center mx-auto mb-3">
+                <FileUp size={24} className="text-orange" />
+              </div>
+              <p className="text-bodybold text-dark truncate px-4">{file.name}</p>
+              <button onClick={(e) => { e.stopPropagation(); setFile(null); }} className="mt-2 text-caption text-orange font-bold hover:underline uppercase tracking-wider">Change File</button>
+            </div>
+          ) : (
+            <div className="animate-fadeIn">
+              <div className="w-12 h-12 rounded-badge bg-appbg flex items-center justify-center mx-auto mb-3">
+                <Upload size={24} className="text-muted" />
+              </div>
+              <p className="text-bodybold text-dark">{dragActive ? 'Drop here' : 'Tap to Upload'}</p>
+              <p className="text-caption text-muted mt-1 uppercase tracking-widest">Select .ics file</p>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleImport}
+          disabled={importing || !file}
+          className="w-full mt-6 bg-dark text-white py-4 rounded-btn font-display font-bold disabled:opacity-30 active:scale-[0.98] transition-all hover:opacity-90 uppercase tracking-widest"
+        >
+          {importing ? 'Syncing...' : 'Start Import'}
+        </button>
+
+        {/* Alerts & Results */}
+        {(postImportConflicts > 0 || (importedCount !== null && importedCount > 0)) && (
+          <div className="mt-8 space-y-4">
+            {postImportConflicts > 0 && (
+              <div className="bg-peach border border-peachborder rounded-card p-4 flex gap-4 animate-slideUp">
+                <AlertTriangle size={20} className="text-orange shrink-0" />
+                <div className="flex-1">
+                  <div className="text-bodybold text-dark tracking-tight">{postImportConflicts} Conflicts Spotted</div>
+                  <p className="text-caption text-secondary mt-1">Some events overlap with your current schedule.</p>
+                  <button onClick={() => navigate('/home')} className="mt-4 w-full bg-dark text-white py-2.5 rounded-btn text-caption font-bold uppercase tracking-widest">Review Now</button>
                 </div>
-                <p className="text-sm font-semibold text-textPrimary">
-                  {dragActive ? 'Drop your file here' : 'Choose a .ics file'}
-                </p>
-                <p className="text-xs text-textSecondary mt-1">or drag and drop it here</p>
+              </div>
+            )}
+
+            {importedCount !== null && importedCount > 0 && postImportConflicts === 0 && (
+              <div className="bg-surface border border-border rounded-card p-4 flex gap-4 animate-slideUp">
+                <CheckCircle2 size={20} className="text-dark shrink-0" />
+                <div className="flex-1">
+                  <div className="text-bodybold text-dark">{importedCount} Events Imported</div>
+                  <p className="text-caption text-secondary mt-1">Your schedule is now up to date.</p>
+                  <button onClick={() => navigate('/home')} className="mt-4 w-full bg-dark text-white py-2.5 rounded-btn text-caption font-bold uppercase tracking-widest">Done</button>
+                </div>
               </div>
             )}
           </div>
+        )}
 
-          {/* Import Button */}
-          <button
-            type="button"
-            onClick={handleImport}
-            disabled={importing || !file}
-            className="w-full mt-5 bg-primary text-white py-3.5 rounded-2xl font-display font-semibold disabled:opacity-40 active:scale-[0.98] transition-all shadow-blue hover:bg-primaryDark"
-          >
-            {importing ? 'Importing…' : 'Import Calendar'}
-          </button>
-
-          {/* Post-import conflict alert */}
-          {postImportConflicts > 0 && (
-            <div className="mt-5 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 animate-fadeIn">
-              <AlertTriangle size={20} className="text-red-500 mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <div className="text-sm font-bold text-red-700">
-                  {postImportConflicts} conflict{postImportConflicts > 1 ? 's' : ''} detected
-                </div>
-                <p className="text-xs text-red-600 mt-1">Imported events overlap with existing schedule items.</p>
-                <button
-                  type="button"
-                  onClick={() => navigate('/home?tab=suggestions')}
-                  className="mt-3 w-full bg-red-500 text-white py-2.5 rounded-full text-sm font-semibold active:scale-95 transition"
-                >
-                  Review Conflicts
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Success state */}
-          {importedCount !== null && importedCount > 0 && postImportConflicts === 0 && (
-            <div className="mt-5 bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start gap-3 animate-fadeIn">
-              <CheckCircle2 size={20} className="text-success mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <div className="text-sm font-bold text-green-700">
-                  {importedCount} events imported successfully!
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/home')}
-                  className="mt-3 w-full bg-success text-white py-2.5 rounded-full text-sm font-semibold active:scale-95 transition"
-                >
-                  Go to Dashboard
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Post-import actions */}
-          {(importedCount !== null || postImportConflicts > 0) && (
-            <div className="mt-8 pt-6 border-t border-border flex flex-col gap-4 animate-fadeIn">
-              <button
-                onClick={() => navigate('/home')}
-                className="w-full bg-primary text-white py-4 rounded-2xl font-display font-bold shadow-blue hover:bg-primaryDark active:scale-[0.98] transition-all"
-              >
-                Finish & Go to Dashboard
-              </button>
-              <button
-                onClick={() => { setFile(null); setImportedCount(null); setPostImportConflicts(0); }}
-                className="w-full py-3 text-sm text-textSecondary font-semibold hover:text-primary transition-colors"
-              >
-                Import another file
-              </button>
-            </div>
-          )}
-
-          {/* Skip link (only if not imported yet) */}
-          {importedCount === null && postImportConflicts === 0 && (
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => navigate('/home')}
-                className="text-sm text-primary font-medium hover:underline transition-colors"
-              >
-                ← Back to Dashboard
-              </button>
-            </div>
-          )}
-        </main>
+        {importedCount === null && postImportConflicts === 0 && (
+          <div className="mt-8 text-center px-4">
+            <button
+               onClick={() => navigate('/home')}
+               className="text-caption text-muted font-bold hover:text-dark transition-colors uppercase tracking-widest"
+            >
+              Skip for now
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

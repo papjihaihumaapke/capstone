@@ -1,10 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import TabSwitcher from '../components/TabSwitcher';
 import FormInput from '../components/FormInput';
 import { useItemForm } from '../hooks/useItemForm';
-
-
 
 export default function AddItem() {
   const navigate = useNavigate();
@@ -26,13 +24,11 @@ export default function AddItem() {
     if (mapped) setActiveTab(mapped);
   };
 
-
-
   const renderForm = () => {
     if (activeTab === 'shift') {
       const data = formData.shift;
       return (
-        <>
+        <div className="flex flex-col gap-1">
           <FormInput label="Title" placeholder="e.g. Opening shift" value={data.title} onChange={(v) => updateFormData('title', v)} error={errors.title} />
           <div className="grid grid-cols-2 gap-3">
             <FormInput label="Date" type="date" value={data.date} onChange={(v) => updateFormData('date', v)} error={errors.date} />
@@ -46,13 +42,13 @@ export default function AddItem() {
             <FormInput label="Location" placeholder="e.g. Store A" value={data.location} onChange={(v) => updateFormData('location', v)} />
             <FormInput label="Role" placeholder="e.g. Cashier" value={data.role} onChange={(v) => updateFormData('role', v)} />
           </div>
-        </>
+        </div>
       );
     }
     if (activeTab === 'class') {
       const data = formData.class;
       return (
-        <>
+        <div className="flex flex-col gap-1">
           <FormInput label="Course Name" placeholder="e.g. Math 101" value={data.title} onChange={(v) => updateFormData('title', v)} error={errors.title} />
           <div className="grid grid-cols-2 gap-3">
             <FormInput label="Date" type="date" value={data.date} onChange={(v) => updateFormData('date', v)} error={errors.date} />
@@ -63,10 +59,10 @@ export default function AddItem() {
             <FormInput label="End Time" type="time" value={data.end_time} onChange={(v) => updateFormData('end_time', v)} error={errors.end_time} />
           </div>
           <FormInput label="Location" placeholder="e.g. Room 204" value={data.location} onChange={(v) => updateFormData('location', v)} />
-          <label className="flex items-center gap-3 cursor-pointer">
-            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${data.repeats_weekly ? 'bg-primary border-primary' : 'border-border'}`}
+          <label className="flex items-center gap-3 cursor-pointer py-2">
+            <div className={`w-5 h-5 rounded-[4px] border flex items-center justify-center transition-all ${data.repeats_weekly ? 'bg-dark border-dark' : 'border-border'}`}
               onClick={() => updateFormData('repeats_weekly', !data.repeats_weekly)}>
-              {data.repeats_weekly && <span className="text-white text-xs font-bold">✓</span>}
+              {data.repeats_weekly && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
             </div>
             <input
               type="checkbox"
@@ -74,39 +70,39 @@ export default function AddItem() {
               onChange={(e) => updateFormData('repeats_weekly', e.target.checked)}
               className="sr-only"
             />
-            <span className="text-sm text-textPrimary font-medium">Repeats every week</span>
+            <span className="text-body text-dark font-medium">Repeats every week</span>
           </label>
-        </>
+        </div>
       );
     }
     if (activeTab === 'assignment') {
       const data = formData.assignment;
       return (
-        <>
+        <div className="flex flex-col gap-1">
           <FormInput label="Task Title" placeholder="e.g. Research Paper" value={data.title} onChange={(v) => updateFormData('title', v)} error={errors.title} />
           <div className="grid grid-cols-2 gap-3">
             <FormInput label="Due Date" type="date" value={data.due_date} onChange={(v) => updateFormData('due_date', v)} error={errors.due_date} />
             <FormInput label="Due Time (optional)" type="time" value={data.due_time} onChange={(v) => updateFormData('due_time', v)} />
           </div>
           <FormInput label="Course" placeholder="e.g. CS 101" value={data.course} onChange={(v) => updateFormData('course', v)} />
-        </>
+        </div>
       );
     }
     if (activeTab === 'routine') {
       const data = formData.routine;
       return (
-        <>
+        <div className="flex flex-col gap-1">
           <FormInput label="Habit Name" placeholder="e.g. Morning Gym" value={data.title} onChange={(v) => updateFormData('title', v)} error={errors.title} />
           <div className="mb-4">
-            <label className="block text-xs font-bold text-textSecondary uppercase tracking-wider mb-2">Category</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <label className="block text-caption font-semibold text-dark mb-1">CATEGORY</label>
+            <div className="flex flex-wrap gap-2">
               {['sleep', 'gym', 'meal', 'study', 'other'].map((cat) => (
                 <button
                   key={cat}
                   type="button"
                   onClick={() => updateFormData('category', cat)}
-                  className={`py-2 px-3 rounded-xl border text-xs font-semibold capitalize transition-all ${
-                    data.category === cat ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-border text-textSecondary hover:border-indigo-400'
+                  className={`py-1.5 px-4 rounded-[20px] text-caption font-medium capitalize transition-all ${
+                    data.category === cat ? 'bg-dark text-white border border-dark' : 'bg-surface text-muted border border-border'
                   }`}
                 >
                   {cat}
@@ -118,51 +114,50 @@ export default function AddItem() {
             <FormInput label="Start Time" type="time" value={data.start_time} onChange={(v) => updateFormData('start_time', v)} error={errors.start_time} />
             <FormInput label="End Time" type="time" value={data.end_time} onChange={(v) => updateFormData('end_time', v)} error={errors.end_time} />
           </div>
-          <p className="text-xs text-textSecondary mt-2">
+          <p className="text-caption text-muted mt-1">
             Routines repeat automatically every week to protect your time.
           </p>
-        </>
+        </div>
       );
     }
   };
 
   return (
-    <div className="min-h-screen bg-background animate-fadeIn">
-      {/* Header with blue gradient */}
-      <div className="bg-blue-gradient px-4 pt-10 pb-6 relative overflow-hidden">
-        <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/8" />
-        <div className="max-w-lg lg:max-w-xl mx-auto flex items-center gap-3 relative z-10">
-          <button
-            onClick={() => navigate('/home')}
-            className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center hover:bg-white/25 active:scale-95 transition-all"
-            aria-label="Go back"
-          >
-            <ArrowLeft size={20} className="text-white" />
-          </button>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-              <Plus size={16} className="text-white" />
-            </div>
-            <h1 className="text-lg font-display font-bold text-white">Add to Schedule</h1>
-          </div>
+    <div className="min-h-screen bg-dark/40 backdrop-blur-sm flex flex-col justify-end animate-fadeIn">
+      {/* Background click to close */}
+      <div 
+        className="flex-1 w-full"
+        onClick={() => navigate('/home')} 
+        style={{ cursor: 'pointer' }}
+      >
+        <div className="absolute top-12 left-6 w-9 h-9 bg-surface/10 rounded-btn flex items-center justify-center hover:bg-surface/20 active:scale-95 transition-all">
+          <ArrowLeft size={20} className="text-white" />
         </div>
       </div>
 
-      <div className="max-w-lg lg:max-w-xl mx-auto px-4 lg:px-0 py-5 -mt-3 relative z-10">
-        <div className="bg-white rounded-3xl shadow-elevated border border-border p-5">
-          <TabSwitcher tabs={tabs} activeTab={currentTabDisplay} onTabChange={handleTabChange} />
-          <div className="mt-6">
-            {renderForm()}
-          </div>
+      {/* Bottom Sheet Form */}
+      <div className="bg-surface rounded-t-[24px] w-full max-w-[480px] mx-auto px-5 pt-3 pb-8">
+        
+        {/* Drag handle */}
+        <div className="w-12 h-1.5 bg-border rounded-full mx-auto mb-5" />
+
+        <h1 className="text-h3 text-dark font-display mb-4">Add to Schedule</h1>
+
+        <div className="mb-5">
+           <TabSwitcher tabs={tabs} activeTab={currentTabDisplay} onTabChange={handleTabChange} />
         </div>
 
-        <button
-          onClick={submit}
-          disabled={loading}
-          className="w-full mt-4 bg-primary text-white py-4 rounded-2xl font-display font-semibold hover:bg-primaryDark active:scale-[0.98] transition-all disabled:opacity-50 shadow-blue"
-        >
-          {loading ? 'Saving…' : `Save ${currentTabDisplay}`}
-        </button>
+        {renderForm()}
+
+        <div className="mt-8">
+          <button
+            onClick={submit}
+            disabled={loading}
+            className="w-full bg-dark text-white py-3.5 rounded-btn text-body font-semibold hover:opacity-90 active:scale-95 transition-all shadow-none disabled:opacity-50"
+          >
+            {loading ? 'Saving…' : `Save ${currentTabDisplay}`}
+          </button>
+        </div>
       </div>
     </div>
   );

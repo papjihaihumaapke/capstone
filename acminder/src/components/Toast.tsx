@@ -16,7 +16,7 @@ export default function Toast() {
 
   return (
     <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 animate-fadeIn">
-      <div className="bg-[#1A1A1A] text-white rounded-full px-5 py-2 text-sm shadow-lg">
+      <div className="bg-dark text-white rounded-full px-5 py-2 text-caption">
         {toast.message}
       </div>
     </div>

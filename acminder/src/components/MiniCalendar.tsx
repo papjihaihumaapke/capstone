@@ -20,10 +20,10 @@ export default function MiniCalendar({ items, selectedDate, onDateSelect }: Mini
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+    <div className="w-full">
       <div className="grid grid-cols-7 gap-1 mb-2">
         {weekDays.map((day) => (
-          <div key={day} className="text-center text-xs text-gray-500 font-medium">
+          <div key={day} className="text-center text-[11px] text-muted font-bold tracking-wide uppercase">
             {day}
           </div>
         ))}
@@ -37,13 +37,13 @@ export default function MiniCalendar({ items, selectedDate, onDateSelect }: Mini
             <button
               key={day.toISOString()}
               onClick={() => onDateSelect(day)}
-              className={`relative w-8 h-8 flex items-center justify-center text-sm rounded-full transition-colors ${
-                isSelected ? 'bg-primary text-white' : isTodayDate ? 'bg-primary/20 text-primary' : 'text-textPrimary hover:bg-gray-100'
+              className={`relative h-10 w-full flex items-center justify-center text-body rounded-[14px] transition-colors mx-auto ${
+                isSelected ? 'bg-dark text-white font-bold' : isTodayDate ? 'bg-border/50 text-dark font-bold' : 'text-dark hover:bg-appbg'
               }`}
             >
               {format(day, 'd')}
               {hasItem && !isSelected && (
-                <div className="absolute bottom-0 w-1 h-1 bg-primary rounded-full"></div>
+                <div className="absolute bottom-1.5 w-1 h-1 bg-orange rounded-full"></div>
               )}
             </button>
           );

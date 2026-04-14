@@ -26,17 +26,17 @@ export default function DateStrip({ selectedDate, onDateSelect }: DateStripProps
               isActive
                 ? 'bg-primary text-white shadow-blue'
                 : todayDay
-                ? 'bg-primaryLight text-primary border border-primary/20'
-                : 'bg-white border border-border text-textPrimary hover:border-primary/30'
+                ? 'bg-primaryLight primary border border-primary/20'
+                : 'bg-white border border-border text-primary hover:border-primary/30'
             }`}
           >
             <span className={`text-lg font-bold leading-none ${
-              isActive ? 'text-white' : todayDay ? 'text-primary' : 'text-textPrimary'
+              isActive ? 'text-white' : todayDay ? 'primary' : 'text-primary'
             }`}>
               {format(day, 'd')}
             </span>
             <span className={`text-[10px] font-medium uppercase tracking-wide ${
-              isActive ? 'text-white/80' : todayDay ? 'text-primary/70' : 'text-textSecondary'
+              isActive ? 'text-white/80' : todayDay ? 'primary/70' : 'text-secondary'
             }`}>
               {format(day, 'EEE')}
             </span>

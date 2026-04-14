@@ -9,7 +9,7 @@ interface StatCardProps {
   bg?: string;
 }
 
-function StatCard({ label, value, subtitle, icon, accent = 'text-primary', bg = 'bg-primaryLight' }: StatCardProps) {
+function StatCard({ label, value, subtitle, icon, accent = 'primary', bg = 'bg-primaryLight' }: StatCardProps) {
   return (
     <div className="bg-white rounded-2xl p-4 shadow-card border border-border">
       <div className="flex items-center justify-between mb-3">
@@ -18,8 +18,8 @@ function StatCard({ label, value, subtitle, icon, accent = 'text-primary', bg = 
         </div>
       </div>
       <div className={`text-2xl font-bold font-display ${accent}`}>{value}</div>
-      <div className="text-xs font-semibold text-textPrimary mt-0.5">{label}</div>
-      <div className="text-[10px] text-textSecondary mt-0.5">{subtitle}</div>
+      <div className="text-xs font-semibold text-primary mt-0.5">{label}</div>
+      <div className="text-[10px] text-secondary mt-0.5">{subtitle}</div>
     </div>
   );
 }
@@ -38,8 +38,8 @@ export default function StatsGrid({ todayCount, upcomingCount, clashCount, compl
         label="Today's Items"
         value={todayCount}
         subtitle="on schedule"
-        icon={<CalendarDays size={16} className="text-primary" />}
-        accent="text-primary"
+        icon={<CalendarDays size={16} className="primary" />}
+        accent="primary"
         bg="bg-primaryLight"
       />
       <StatCard

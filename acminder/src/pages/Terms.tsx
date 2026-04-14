@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 const TERMS_SECTIONS = [
   {
@@ -51,67 +52,52 @@ export default function Terms() {
   const nav = useNavigate();
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      background: '#F2F3F7',
-      fontFamily: '-apple-system, "SF Pro Display", sans-serif',
-    }}>
-      <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 110 }}>
-
-        {/* Status bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 20px 0' }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#0D0D0D' }}>9:41</span>
-        </div>
+    <div className="min-h-[100dvh] bg-appbg animate-fadeIn pb-32">
+      <div className="max-w-[480px] mx-auto pt-10 px-5">
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0' }}>
+        <div className="flex items-center justify-between mb-8">
           <button
             type="button"
             onClick={() => nav(-1)}
-            style={{ width: 36, height: 36, borderRadius: 12, background: '#fff', border: '0.5px solid #F0F0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            className="w-9 h-9 rounded-btn bg-surface border border-border flex items-center justify-center cursor-pointer active:scale-95 transition-all text-dark"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0D0D0D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
+            <ArrowLeft size={20} />
           </button>
-          <span style={{ fontSize: 16, fontWeight: 600, color: '#0D0D0D' }}>Terms & Privacy</span>
-          <div style={{ width: 36 }} />
-        </div>
-
-        {/* Last updated */}
-        <div style={{ padding: '20px 20px 4px' }}>
-          <div style={{ background: '#fff', borderRadius: 18, border: '0.5px solid #F0F0F0', padding: '16px' }}>
-            <div style={{ fontSize: 13, color: '#AAAAAA', marginBottom: 6 }}>Last updated</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#0D0D0D' }}>April 10, 2026</div>
-          </div>
+          <span className="text-h2 font-display text-dark">Terms & Privacy</span>
+          <div className="w-9" />
         </div>
 
         {/* Intro */}
-        <div style={{ padding: '12px 20px 4px' }}>
-          <div style={{ background: '#E8470A', borderRadius: 18, padding: '16px' }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 6 }}>AcMinder Terms of Service</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', lineHeight: 1.6 }}>
-              Please read these terms carefully before using AcMinder. By using the app you agree to all terms outlined below.
-            </div>
+        <div className="bg-orange rounded-card p-5 mb-4">
+          <div className="text-bodybold text-white mb-2">AcMinder Terms of Service</div>
+          <div className="text-caption text-white/80 leading-relaxed font-body">
+            Please read these terms carefully before using AcMinder. By using the app you agree to all terms outlined below.
           </div>
         </div>
 
+        {/* Last updated */}
+        <div className="bg-surface rounded-card border border-border p-5 mb-4 flex items-center justify-between">
+          <span className="text-caption font-bold text-muted uppercase tracking-widest">Last updated</span>
+          <span className="text-body font-semibold text-dark">April 10, 2026</span>
+        </div>
+
         {/* Sections */}
-        <div style={{ padding: '12px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-3">
           {TERMS_SECTIONS.map((section, i) => (
             <div
               key={i}
-              style={{ background: '#fff', borderRadius: 18, border: '0.5px solid #F0F0F0', padding: '16px' }}
+              className="bg-surface rounded-card border border-border p-5"
             >
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#0D0D0D', marginBottom: 8 }}>{section.title}</div>
-              <div style={{ fontSize: 13, color: '#555555', lineHeight: 1.65 }}>{section.body}</div>
+              <h2 className="text-bodybold text-dark mb-2">{section.title}</h2>
+              <p className="text-caption text-muted leading-relaxed font-body">{section.body}</p>
             </div>
           ))}
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '20px 20px 0', textAlign: 'center' }}>
-          <div style={{ fontSize: 12, color: '#AAAAAA' }}>© 2026 AcMinder. All rights reserved.</div>
+        <div className="text-center mt-8 mb-4">
+          <div className="text-caption text-muted">© 2026 AcMinder. All rights reserved.</div>
         </div>
       </div>
     </div>

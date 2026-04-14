@@ -6,16 +6,16 @@ interface TabSwitcherProps {
 
 export default function TabSwitcher({ tabs, activeTab, onTabChange }: TabSwitcherProps) {
   return (
-    <div className="flex w-full bg-surface rounded-2xl p-1 border border-border mb-6">
+    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
       {tabs.map((tab) => (
         <button
           key={tab}
           type="button"
           onClick={() => onTabChange(tab)}
-          className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 outline-none ${
+          className={`px-4 py-2 rounded-[20px] text-body font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
             activeTab === tab
-              ? 'bg-primary text-white shadow-blue'
-              : 'text-textSecondary hover:text-textPrimary'
+              ? 'bg-dark text-white border border-dark'
+              : 'bg-surface text-muted border border-border hover:bg-appbg'
           }`}
         >
           {tab}

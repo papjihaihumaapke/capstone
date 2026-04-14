@@ -21,33 +21,33 @@ export default function SignUp() {
   return (
     <AuthLayout backPath="/onboarding" title="Get started" subtitle="Create your free account">
       {/* Tab switcher */}
-      <div className="flex w-full bg-surface rounded-2xl p-1 border border-border mb-6">
-        <button className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary shadow-blue">
+      <div className="flex w-full bg-surface rounded-btn p-1 border border-border mb-8">
+        <button className="flex-1 py-2.5 rounded-btn text-caption font-bold text-white bg-dark shadow-none uppercase tracking-widest">
           Sign Up
         </button>
         <button
           onClick={() => navigate('/login')}
-          className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-textSecondary hover:text-textPrimary transition-colors"
+          className="flex-1 py-2.5 rounded-btn text-caption font-bold text-muted hover:text-dark transition-colors uppercase tracking-widest"
         >
           Log In
         </button>
       </div>
 
-      <form onSubmit={handleSignUp} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-semibold text-textPrimary">Email</label>
+      <form onSubmit={handleSignUp} className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2">
+          <label className="text-label font-bold text-muted uppercase tracking-wider">Email Address</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
-            className="w-full border border-border rounded-xl px-4 py-3 text-sm text-textPrimary bg-surface focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-textSecondary/50"
+            className="w-full border border-border rounded-btn px-4 py-3.5 text-body text-dark bg-surface outline-none transition-all placeholder:text-muted/40"
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-semibold text-textPrimary">Password</label>
+        <div className="flex flex-col gap-2">
+          <label className="text-label font-bold text-muted uppercase tracking-wider">Password</label>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -56,31 +56,31 @@ export default function SignUp() {
               placeholder="••••••••"
               required
               minLength={6}
-              className="w-full border border-border rounded-xl px-4 py-3 pr-12 text-sm text-textPrimary bg-surface focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-textSecondary/50"
+              className="w-full border border-border rounded-btn px-4 py-3.5 pr-12 text-body text-dark bg-surface outline-none transition-all placeholder:text-muted/40"
             />
             <button
               type="button"
               onClick={() => setShowPassword(p => !p)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-textSecondary hover:text-primary transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-dark transition-colors"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          <p className="text-xs text-textSecondary">Must be at least 6 characters</p>
+          <p className="text-[10px] text-muted font-bold uppercase tracking-wider">Minimum 6 characters</p>
         </div>
 
-        <div className="flex flex-col gap-3 mt-2">
+        <div className="flex flex-col gap-4 mt-4">
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-white py-3.5 rounded-2xl font-display font-semibold transition-all active:scale-[0.98] disabled:opacity-60 shadow-blue hover:bg-primaryDark"
+            className="w-full bg-dark text-white py-4 rounded-btn font-display font-bold transition-all active:scale-[0.98] disabled:opacity-60 shadow-none uppercase tracking-widest"
           >
-            {loading ? 'Creating account…' : 'Create Account'}
+            {loading ? 'Processing...' : 'Create Account'}
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4 px-2">
             <div className="flex-1 h-px bg-border" />
-            <span className="text-xs text-textSecondary font-medium">or</span>
+            <span className="text-[10px] text-muted font-bold uppercase tracking-widest">or</span>
             <div className="flex-1 h-px bg-border" />
           </div>
 
@@ -88,7 +88,7 @@ export default function SignUp() {
             type="button"
             onClick={signInWithGoogle}
             disabled={loading}
-            className="w-full bg-white border border-border text-textPrimary py-3.5 rounded-2xl font-display font-semibold transition-all active:scale-[0.98] disabled:opacity-60 flex justify-center items-center gap-3 hover:bg-surface shadow-card"
+            className="w-full bg-white border border-border text-dark py-4 rounded-btn font-display font-bold transition-all active:scale-[0.98] disabled:opacity-60 flex justify-center items-center gap-3 hover:bg-appbg uppercase tracking-widest"
           >
             <svg width="18" height="18" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -96,14 +96,14 @@ export default function SignUp() {
               <path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.01 24.01 0 0 0 0 21.56l7.98-6.19z"/>
               <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
             </svg>
-            Continue with Google
+            Google
           </button>
 
           {error && (
-            <div className={`p-3 text-xs font-medium rounded-xl text-center border ${
+            <div className={`p-4 text-caption font-bold rounded-btn text-center border ${
               error.toLowerCase().includes('google') || error.toLowerCase().includes('too many')
-                ? 'bg-amber-50 text-amber-700 border-amber-200' 
-                : 'bg-red-50 text-danger border-red-100'
+                ? 'bg-peach text-orange border-peachborder' 
+                : 'bg-peach text-orange border-peachborder'
             }`}>
               {error}
             </div>

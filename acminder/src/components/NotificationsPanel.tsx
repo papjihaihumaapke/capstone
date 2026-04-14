@@ -40,8 +40,8 @@ export default function NotificationsPanel({ conflicts, onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <Bell size={16} className="text-primary" />
-            <h3 className="font-display font-bold text-sm text-textPrimary">Notifications</h3>
+            <Bell size={16} className="primary" />
+            <h3 className="font-display font-bold text-sm text-primary">Notifications</h3>
             {unresolved.length > 0 && (
               <span className="bg-danger text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
                 {unresolved.length}
@@ -52,7 +52,7 @@ export default function NotificationsPanel({ conflicts, onClose }: Props) {
             onClick={onClose}
             className="w-7 h-7 rounded-lg hover:bg-surface flex items-center justify-center transition-colors"
           >
-            <X size={14} className="text-textSecondary" />
+            <X size={14} className="text-secondary" />
           </button>
         </div>
 
@@ -63,8 +63,8 @@ export default function NotificationsPanel({ conflicts, onClose }: Props) {
               <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mb-3">
                 <CheckCircle2 size={24} className="text-success" strokeWidth={1.5} />
               </div>
-              <p className="text-sm font-semibold text-textPrimary mb-1">All caught up!</p>
-              <p className="text-xs text-textSecondary text-center">No schedule conflicts to worry about.</p>
+              <p className="text-sm font-semibold text-primary mb-1">All caught up!</p>
+              <p className="text-xs text-secondary text-center">No schedule conflicts to worry about.</p>
             </div>
           ) : (
             <div className="py-1">
@@ -85,19 +85,19 @@ export default function NotificationsPanel({ conflicts, onClose }: Props) {
                       <AlertTriangle size={14} className={isCritical ? 'text-danger' : 'text-warning'} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-textPrimary leading-snug">
+                      <p className="text-xs font-bold text-primary leading-snug">
                         {c.item_a.title}
-                        <span className="text-textSecondary font-normal mx-1">vs</span>
+                        <span className="text-secondary font-normal mx-1">vs</span>
                         {c.item_b.title}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         {dateStr && (
-                          <span className="text-[10px] text-textSecondary">
+                          <span className="text-[10px] text-secondary">
                             {format(new Date(`${dateStr}T00:00:00`), 'MMM d')}
                           </span>
                         )}
                         {overlap && (
-                          <span className="text-[10px] text-primary flex items-center gap-0.5">
+                          <span className="text-[10px] primary flex items-center gap-0.5">
                             <Clock size={8} /> {overlap}
                           </span>
                         )}
@@ -121,7 +121,7 @@ export default function NotificationsPanel({ conflicts, onClose }: Props) {
                 navigate('/home?tab=suggestions');
                 onClose();
               }}
-              className="w-full text-center text-xs font-semibold text-primary hover:text-primaryDark transition-colors"
+              className="w-full text-center text-xs font-semibold primary hover:primaryDark transition-colors"
             >
               View all conflicts →
             </button>

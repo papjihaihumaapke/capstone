@@ -4,7 +4,7 @@ import ScheduleItemCard from '../components/ScheduleItemCard';
 import NotificationsPanel from '../components/NotificationsPanel';
 import FeaturedConflictCard from '../components/FeaturedConflictCard';
 import { useNavigate } from 'react-router-dom';
-import { format, addDays, isSameDay, isToday } from 'date-fns';
+import { format, addDays, isSameDay } from 'date-fns';
 import { itemOccursOnDate } from '../lib/conflictEngine';
 import { getConflictDateStr } from '../lib/homeHelpers';
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar';
@@ -32,7 +32,6 @@ export default function Home() {
   const [showNotifications, setShowNotifications] = useState(false);
   const { sync } = useGoogleCalendar();
 
-  // Auto-sync Google Calendar silently on load (1-hour cooldown, no toast spam)
   useEffect(() => { sync({ silent: true }); }, []);
 
   const selStr = format(selDate, 'yyyy-MM-dd');
@@ -64,7 +63,6 @@ export default function Home() {
       .sort((x, y) => x.dateStr.localeCompare(y.dateStr)),
     [allUnresolved, todayStr, endStr]);
 
-  // greeting
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning,' : hour < 17 ? 'Good afternoon,' : 'Good evening,';
   const email = ctx?.user?.email || '';
@@ -73,8 +71,7 @@ export default function Home() {
     return raw.charAt(0).toUpperCase() + raw.slice(1).split(/[._]/)[0];
   })();
 
-  // days with events for dot indicator
-  const days = useMemo(() => buildDayStrip(items || [], selStr), []);
+  const days = useMemo(() => buildDayStrip(), []);
   const daysWithEvents = useMemo(() => {
     const set = new Set<string>();
     (items || []).forEach(item => {
@@ -87,28 +84,25 @@ export default function Home() {
   }, [items, days]);
 
   return (
-    <div style={{ background: '#F2F3F7', minHeight: '100dvh', fontFamily: '-apple-system, "SF Pro Display", sans-serif', position: 'relative', overflowX: 'hidden' }}>
-      <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 110 }}>
-
-        {/* ── STATUS BAR ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px 0' }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#0D0D0D' }}>9:41</span>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', opacity: 0.55 }}>
-            {/* Signal */}
+    <div className="min-h-[100dvh] bg-appbg relative overflow-x-hidden pb-32">
+      <div className="max-w-[480px] mx-auto">
+        
+        {/* STATUS BAR */}
+        <div className="flex justify-between items-center px-5 pt-[14px]">
+          <span className="text-[15px] font-bold text-dark">9:41</span>
+          <div className="flex gap-1.5 items-center opacity-55">
             <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
               <rect x="0" y="8" width="3" height="4" rx="1" fill="#0D0D0D"/>
               <rect x="4.5" y="5" width="3" height="7" rx="1" fill="#0D0D0D"/>
               <rect x="9" y="2" width="3" height="10" rx="1" fill="#0D0D0D"/>
               <rect x="13.5" y="0" width="2.5" height="12" rx="1" fill="#0D0D0D"/>
             </svg>
-            {/* Wifi */}
             <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
               <path d="M8 10a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" fill="#0D0D0D"/>
               <path d="M5.2 7.5A4 4 0 0 1 8 6.5a4 4 0 0 1 2.8 1" stroke="#0D0D0D" strokeWidth="1.4" strokeLinecap="round"/>
               <path d="M2.8 5A7 7 0 0 1 8 3a7 7 0 0 1 5.2 2" stroke="#0D0D0D" strokeWidth="1.4" strokeLinecap="round"/>
               <path d="M0.5 2.5A10.5 10.5 0 0 1 8 0a10.5 10.5 0 0 1 7.5 2.5" stroke="#0D0D0D" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
-            {/* Battery */}
             <svg width="22" height="12" viewBox="0 0 22 12" fill="none">
               <rect x="0.5" y="0.5" width="18" height="11" rx="2.5" stroke="#0D0D0D" strokeWidth="1"/>
               <rect x="2" y="2" width="13" height="8" rx="1.5" fill="#0D0D0D"/>
@@ -117,18 +111,18 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── HEADER ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0' }}>
+        {/* HEADER */}
+        <div className="flex items-center justify-between px-5 pt-[18px]">
           <div>
-            <div style={{ fontSize: 13, color: '#888888', fontWeight: 400, lineHeight: 1.3 }}>{greeting}</div>
-            <div style={{ fontSize: 18, color: '#0D0D0D', fontWeight: 600, lineHeight: 1.3 }}>{firstName}</div>
+            <div className="text-h2 font-display text-secondary font-normal leading-tight">{greeting}</div>
+            <div className="text-h2 font-display text-dark leading-tight">{firstName}</div>
           </div>
-          <div style={{ display: 'flex', gap: 8, position: 'relative' }}>
+          <div className="flex gap-2 relative">
             <button
               type="button"
               onClick={() => nav('/calendar')}
               aria-label="Calendar"
-              style={{ width: 36, height: 36, borderRadius: 12, background: '#fff', border: '0.5px solid #F0F0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              className="w-9 h-9 bg-surface rounded-btn border border-border flex items-center justify-center hover:bg-appbg"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0D0D0D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2"/>
@@ -141,14 +135,14 @@ export default function Home() {
               type="button"
               onClick={() => setShowNotifications(p => !p)}
               aria-label="Notifications"
-              style={{ width: 36, height: 36, borderRadius: 12, background: '#fff', border: '0.5px solid #F0F0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative' }}
+              className="w-9 h-9 bg-surface rounded-btn border border-border flex items-center justify-center hover:bg-appbg relative"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0D0D0D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
               </svg>
               {clashN > 0 && (
-                <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, background: '#E8470A', color: '#fff', fontSize: 9, fontWeight: 700, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-orange text-white text-[9px] font-bold rounded-badge flex items-center justify-center px-1">
                   {clashN > 9 ? '9+' : clashN}
                 </span>
               )}
@@ -159,15 +153,19 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── DATE SECTION ── */}
-        <div style={{ padding: '22px 20px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 16 }}>
-            <span style={{ fontSize: 22, fontWeight: 700, color: '#0D0D0D' }}>{format(selDate, 'MMMM')}</span>
-            <span style={{ fontSize: 22, fontWeight: 400, color: '#BBBCBF' }}>{format(selDate, 'yyyy')}</span>
+        {/* DATE SECTION */}
+        <div className="px-5 pt-5 pb-0 flex items-center justify-between">
+          <span className="text-label text-orange uppercase tracking-widest">OVERVIEW</span>
+        </div>
+
+        <div className="px-5 pt-3">
+          <div className="flex items-baseline gap-1.5 mb-4">
+            <span className="text-h1 font-display text-dark">{format(selDate, 'MMMM')}</span>
+            <span className="text-h1 font-display text-muted !font-normal">{format(selDate, 'yyyy')}</span>
           </div>
 
-          {/* Day strip */}
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {/* DAY STRIP */}
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
             {days.map(day => {
               const ds = format(day, 'yyyy-MM-dd');
               const isActive = isSameDay(day, selDate);
@@ -178,69 +176,43 @@ export default function Home() {
                   key={ds}
                   type="button"
                   onClick={() => setSelDate(day)}
-                  style={{
-                    width: 44,
-                    flexShrink: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: '10px 0',
-                    borderRadius: 14,
-                    border: 'none',
-                    cursor: 'pointer',
-                    gap: 3,
-                    background: isActive ? '#0D0D0D' : 'transparent',
-                    transition: 'background 0.15s',
-                  }}
+                  className={`flex flex-col items-center gap-1 min-w-[44px] py-2.5 px-1 rounded-[14px] cursor-pointer transition-colors ${isActive ? 'bg-dark' : 'bg-transparent'}`}
                 >
-                  <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.5px', color: isActive ? 'rgba(255,255,255,0.6)' : '#AAAAAA', fontWeight: 500 }}>
+                  <span className={`text-[10px] font-medium uppercase tracking-wide ${isActive ? 'text-white/50' : 'text-muted'}`}>
                     {format(day, 'EEE')}
                   </span>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: isActive ? '#FFFFFF' : '#0D0D0D', lineHeight: 1 }}>
+                  <span className={`text-[16px] font-bold leading-none ${isActive ? 'text-white' : 'text-dark'}`}>
                     {format(day, 'd')}
                   </span>
-                  {/* dot */}
-                  <span style={{
-                    width: 4, height: 4, borderRadius: '50%',
-                    background: isActive
-                      ? 'rgba(255,255,255,0.5)'
-                      : hasEvents
-                      ? '#E8470A'
-                      : 'transparent',
-                    marginTop: 1,
-                    display: 'block',
-                  }} />
+                  <span className={`w-1 h-1 rounded-full ${isActive ? 'bg-white/50' : hasEvents ? 'bg-orange' : 'bg-transparent'}`} />
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* ── STAT CARDS ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, padding: '18px 20px 0' }}>
-          {/* Tasks */}
-          <div style={{ background: '#fff', borderRadius: 18, padding: '14px 12px', border: '0.5px solid #F0F0F0' }}>
-            <div style={{ fontSize: 26, fontWeight: 700, color: '#0D0D0D', lineHeight: 1 }}>{todaysItems.length}</div>
-            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', color: '#AAAAAA', marginTop: 4 }}>TASKS</div>
-            <div style={{ fontSize: 10, color: '#CCCCCC', marginTop: 2 }}>Today</div>
+        {/* STAT CARDS */}
+        <div className="grid grid-cols-3 gap-2.5 px-5 pt-4">
+          <div className="bg-surface rounded-card border border-border p-3">
+            <div className="text-[26px] font-bold text-dark leading-none">{todaysItems.length}</div>
+            <div className="text-label text-muted uppercase mt-1">TASKS</div>
+            <div className="text-[10px] text-muted/60 mt-0.5">Today</div>
           </div>
-          {/* Conflicts — accent */}
-          <div style={{ background: '#E8470A', borderRadius: 18, padding: '14px 12px', border: '0.5px solid #E8470A' }}>
-            <div style={{ fontSize: 26, fontWeight: 700, color: '#FFFFFF', lineHeight: 1 }}>{clashN}</div>
-            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>CONFLICTS</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>Issues</div>
+          <div className="bg-orange rounded-card p-3">
+            <div className="text-[26px] font-bold text-white leading-none">{clashN}</div>
+            <div className="text-label text-white/70 uppercase mt-1">CONFLICTS</div>
+            <div className="text-[10px] text-white/50 mt-0.5">Issues</div>
           </div>
-          {/* Done */}
-          <div style={{ background: '#fff', borderRadius: 18, padding: '14px 12px', border: '0.5px solid #F0F0F0' }}>
-            <div style={{ fontSize: 26, fontWeight: 700, color: '#0D0D0D', lineHeight: 1 }}>{completed.length}</div>
-            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.4px', color: '#AAAAAA', marginTop: 4 }}>DONE</div>
-            <div style={{ fontSize: 10, color: '#CCCCCC', marginTop: 2 }}>Finished</div>
+          <div className="bg-surface rounded-card border border-border p-3">
+            <div className="text-[26px] font-bold text-dark leading-none">{completed.length}</div>
+            <div className="text-label text-muted uppercase mt-1">DONE</div>
+            <div className="text-[10px] text-muted/60 mt-0.5">Finished</div>
           </div>
         </div>
 
-        {/* ── SMART INSIGHTS (conflicts) ── */}
+        {/* SMART INSIGHTS */}
         {(clashN > 0 || dayConflict) && (
-          <div style={{ padding: '18px 20px 0' }}>
+          <div className="px-5 pt-4">
             {dayConflict ? (
               <FeaturedConflictCard
                 conflict={dayConflict}
@@ -248,19 +220,26 @@ export default function Home() {
                 onClick={() => nav(`/conflict/${dayConflict.id}`)}
               />
             ) : (
-              <div style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', paddingBottom: 4 }}>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 {fc.map(({ c, dateStr }) => (
                   <div
                     key={c.id}
                     onClick={() => nav(`/conflict/${c.id}`)}
-                    style={{ minWidth: 260, background: '#fff', borderRadius: 18, padding: '14px 16px', border: '0.5px solid #F0F0F0', cursor: 'pointer', flexShrink: 0 }}
+                    className="min-w-[260px] bg-peach rounded-card border border-peachborder p-3.5 cursor-pointer flex-shrink-0 mb-2"
                   >
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#E8470A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{format(new Date(`${dateStr}T00:00:00`), 'MMM d')}</span>
-                      <span style={{ fontSize: 10, color: '#CCCCCC' }}>•</span>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: '#AAAAAA', textTransform: 'uppercase' }}>{c.severity} overlap</span>
+                    <div className="flex items-center gap-2 mb-2">
+                       <div className="w-7 h-7 bg-orange rounded-badge flex items-center justify-center">
+                          <svg className="w-3.5 h-3.5 stroke-white" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                          </svg>
+                       </div>
+                       <span className="text-caption font-bold text-orange">{format(new Date(`${dateStr}T00:00:00`), 'MMM d')} • {c.severity} overlap</span>
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#0D0D0D', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.item_a.title} vs {c.item_b.title}</div>
+                    <div className="text-caption text-peachtext leading-relaxed overflow-hidden text-ellipsis whitespace-nowrap">
+                      {c.item_a.title} vs {c.item_b.title}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -268,89 +247,70 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── TIMELINE SECTION HEADER ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '22px 20px 0' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#0D0D0D', textTransform: 'uppercase', letterSpacing: '0.3px' }}>TIMELINE</span>
-          <button
-            type="button"
-            onClick={() => nav('/calendar')}
-            style={{ fontSize: 12, fontWeight: 500, color: '#E8470A', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          >
-            View full →
-          </button>
+        {/* TIMELINE SECTION HEADER */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-0">
+          <span className="text-label text-orange uppercase tracking-widest">TIMELINE</span>
+          <button onClick={() => nav('/calendar')} className="text-caption text-orange font-semibold">View full →</button>
         </div>
 
-        {/* ── FILTER PILLS ── */}
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', padding: '14px 20px 0', paddingRight: 0 }}>
+        {/* FILTER PILLS */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pl-5 pr-5 pt-3">
           {FILTERS.map(f => (
             <button
               key={f.key}
               type="button"
               onClick={() => setFilter(f.key)}
-              style={{
-                padding: '6px 16px',
-                borderRadius: 20,
-                fontSize: 12,
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                background: filter === f.key ? '#0D0D0D' : '#FFFFFF',
-                color: filter === f.key ? '#FFFFFF' : '#888888',
-                border: filter === f.key ? 'none' : '0.5px solid #EBEBEB',
-              }}
+              className={`px-4 py-1.5 rounded-[20px] text-caption font-medium cursor-pointer whitespace-nowrap transition-colors flex-shrink-0 ${
+                filter === f.key 
+                ? 'bg-dark text-white border border-dark' 
+                : 'bg-surface text-muted border border-border'
+              }`}
             >
               {f.label}
             </button>
           ))}
-          <div style={{ width: 20, flexShrink: 0 }} />
         </div>
 
-        {/* ── SCHEDULE LIST / EMPTY STATE ── */}
-        <div style={{ padding: '16px 20px 0' }}>
+        {/* SCHEDULE LIST / EMPTY STATE */}
+        <div className="px-5 pt-3">
           {onProgress.length === 0 && completed.length === 0 ? (
-            /* Empty state */
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 20px', gap: 10 }}>
-              <div style={{ width: 56, height: 56, borderRadius: 18, background: '#F0F0F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#BBBBBB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <div className="flex flex-col items-center justify-center py-10 gap-2.5">
+              <div className="w-14 h-14 bg-border/40 rounded-[18px] flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#AAAAAA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2"/>
                   <line x1="16" y1="2" x2="16" y2="6"/>
                   <line x1="8" y1="2" x2="8" y2="6"/>
                   <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
               </div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#0D0D0D', marginTop: 4 }}>Nothing scheduled</div>
-              <div style={{ fontSize: 13, color: '#AAAAAA', textAlign: 'center' }}>Add items to start building your day</div>
+              <div className="text-bodybold text-dark mt-1">Nothing scheduled</div>
+              <div className="text-caption text-muted text-center">Add items to start building your day</div>
               <button
                 onClick={() => nav('/add')}
-                style={{ marginTop: 8, background: '#0D0D0D', color: '#FFFFFF', fontSize: 13, fontWeight: 500, padding: '10px 22px', borderRadius: 20, border: 'none', cursor: 'pointer' }}
+                className="mt-2 bg-dark text-white rounded-btn px-5 py-2 text-body font-semibold hover:opacity-90 active:scale-95 transition-all"
               >
                 + Add item
               </button>
             </div>
           ) : (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {onProgress.map(it => (
-                  <ScheduleItemCard
-                    key={it.id}
-                    item={it}
-                    userId={ctx?.user?.id || ''}
-                    conflictSeverity={(conflicts || []).find(c => (c.item_a.id === it.id || c.item_b.id === it.id) && !c.resolved)?.severity || 'none'}
-                    onClick={() => nav(`/item/${it.id}`)}
-                    onMarkDone={() => ctx?.updateItem?.(it.id, { completed: true })}
-                  />
-                ))}
-              </div>
+            <div className="flex flex-col gap-2">
+              {onProgress.map(it => (
+                <ScheduleItemCard
+                  key={it.id}
+                  item={it}
+                  userId={ctx?.user?.id || ''}
+                  conflictSeverity={(conflicts || []).find(c => (c.item_a.id === it.id || c.item_b.id === it.id) && !c.resolved)?.severity || 'none'}
+                  onClick={() => nav(`/item/${it.id}`)}
+                  onMarkDone={() => ctx?.updateItem?.(it.id, { completed: true })}
+                />
+              ))}
 
               {completed.length > 0 && (
-                <div style={{ marginTop: 24 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#0D0D0D', textTransform: 'uppercase', letterSpacing: '0.3px' }}>COMPLETED</span>
-                    <span style={{ fontSize: 12, color: '#AAAAAA' }}>{completed.length} items</span>
+                <div className="mt-4">
+                  <div className="flex items-center justify-between pt-5 pb-0 mb-3">
+                    <span className="text-label text-orange uppercase tracking-widest">COMPLETED</span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="flex flex-col gap-2">
                     {completed.map(it => (
                       <ScheduleItemCard
                         key={it.id}
@@ -363,37 +323,10 @@ export default function Home() {
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
-
-      {/* ── FAB ── */}
-      <button
-        onClick={() => nav('/add')}
-        aria-label="Add new item"
-        style={{
-          position: 'fixed',
-          bottom: 90,
-          right: 24,
-          width: 52,
-          height: 52,
-          borderRadius: 18,
-          background: '#E8470A',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 20,
-        }}
-      >
-        {/* Plus icon */}
-        <div style={{ position: 'relative', width: 14, height: 14 }}>
-          <div style={{ position: 'absolute', top: '50%', left: 0, width: 14, height: 2, background: '#fff', borderRadius: 2, transform: 'translateY(-50%)' }} />
-          <div style={{ position: 'absolute', left: '50%', top: 0, width: 2, height: 14, background: '#fff', borderRadius: 2, transform: 'translateX(-50%)' }} />
-        </div>
-      </button>
     </div>
   );
 }

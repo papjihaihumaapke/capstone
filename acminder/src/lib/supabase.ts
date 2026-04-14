@@ -54,10 +54,9 @@ export const addItem = async (item: Omit<ScheduleItem, 'id' | 'created_at'>): Pr
 
 export const addItems = async (items: Array<Omit<ScheduleItem, 'id' | 'created_at'>>): Promise<ScheduleItem[]> => {
   if (items.length === 0) return [];
-  // Use upsert to handle items synced from external calendars by their external_id
   const { data, error } = await supabase
     .from('schedule_items')
-    .upsert(items, { onConflict: 'external_id', ignoreDuplicates: false })
+    .insert(items)
     .select('*');
     
   if (error) throw error;

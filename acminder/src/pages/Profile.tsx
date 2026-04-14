@@ -1,31 +1,7 @@
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
-
-const S = {
-  page: {
-    minHeight: '100dvh',
-    background: '#F2F3F7',
-    fontFamily: '-apple-system, "SF Pro Display", sans-serif',
-  } as React.CSSProperties,
-  inner: {
-    maxWidth: 480,
-    margin: '0 auto',
-    paddingBottom: 110,
-  } as React.CSSProperties,
-  statusBar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '14px 20px 0',
-  } as React.CSSProperties,
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '18px 20px 0',
-  } as React.CSSProperties,
-};
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 
 function Row({ label, value, onClick, last = false }: { label: string; value?: string; onClick?: () => void; last?: boolean }) {
   const Wrapper: any = onClick ? 'button' : 'div';
@@ -33,43 +9,20 @@ function Row({ label, value, onClick, last = false }: { label: string; value?: s
     <Wrapper
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '14px 16px',
-        borderBottom: last ? 'none' : '0.5px solid #F0F0F0',
-        background: 'none',
-        cursor: onClick ? 'pointer' : 'default',
-        boxSizing: 'border-box' as const,
-        textAlign: 'left' as const,
-      }}
+      className={`w-full flex items-center justify-between py-4 px-4 text-left bg-transparent ${!last ? 'border-b border-border' : ''} ${onClick ? 'cursor-pointer hover:bg-appbg/50 transition-colors' : ''}`}
     >
-      <span style={{ fontSize: 14, fontWeight: 500, color: '#0D0D0D' }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {value && <span style={{ fontSize: 13, color: '#AAAAAA' }}>{value}</span>}
-        {onClick && (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#BBBBBB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        )}
+      <span className="text-body font-medium text-dark">{label}</span>
+      <div className="flex items-center gap-2">
+        {value && <span className="text-caption text-muted">{value}</span>}
+        {onClick && <ChevronRight size={16} className="text-muted" />}
       </div>
     </Wrapper>
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ background: '#fff', borderRadius: 18, border: '0.5px solid #F0F0F0', overflow: 'hidden', marginBottom: 12 }}>
-      {children}
-    </div>
-  );
-}
-
 function SectionLabel({ label }: { label: string }) {
   return (
-    <div style={{ fontSize: 11, fontWeight: 600, color: '#AAAAAA', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '20px 0 8px', padding: '0 4px' }}>
+    <div className="text-label font-bold text-muted uppercase tracking-widest mt-6 mb-2 ml-1">
       {label}
     </div>
   );
@@ -91,77 +44,67 @@ export default function Profile() {
   const unresolvedConflicts = conflicts.filter(c => !c.resolved).length;
 
   return (
-    <div style={S.page}>
-      <div style={S.inner}>
-
-        {/* Status bar */}
-        <div style={S.statusBar}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: '#0D0D0D' }}>9:41</span>
-        </div>
+    <div className="min-h-[100dvh] bg-appbg animate-fadeIn pb-32">
+      <div className="max-w-[480px] mx-auto pt-10 px-5">
 
         {/* Header */}
-        <div style={S.header}>
+        <div className="flex items-center justify-between mb-8">
           <button
             type="button"
             onClick={() => nav(-1)}
-            style={{ width: 36, height: 36, borderRadius: 12, background: '#fff', border: '0.5px solid #F0F0F0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            className="w-9 h-9 rounded-btn bg-surface border border-border flex items-center justify-center cursor-pointer active:scale-95 transition-all text-dark"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0D0D0D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
+            <ArrowLeft size={20} />
           </button>
-          <span style={{ fontSize: 16, fontWeight: 600, color: '#0D0D0D' }}>Profile</span>
-          <div style={{ width: 36 }} />
+          <span className="text-h2 font-display text-dark">Profile</span>
+          <div className="w-9" />
         </div>
 
         {/* Avatar + name */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '28px 20px 20px' }}>
-          <div style={{
-            width: 80, height: 80, borderRadius: 24, background: '#0D0D0D',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-          }}>
-            <span style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>{initial}</span>
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-20 h-20 rounded-t-[24px] rounded-br-[24px] rounded-bl-[8px] bg-dark flex flex-col items-center justify-center mb-4 transition-transform active:scale-95">
+            <span className="text-[32px] font-bold text-white font-display mb-1">{initial}</span>
           </div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#0D0D0D', marginBottom: 4 }}>{displayName}</div>
-          <div style={{ fontSize: 13, color: '#AAAAAA' }}>{email}</div>
+          <div className="text-h2 font-display text-dark mb-0.5">{displayName}</div>
+          <div className="text-caption text-muted">{email}</div>
         </div>
 
         {/* Stats row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, padding: '0 20px 4px' }}>
-          <div style={{ background: '#fff', borderRadius: 18, padding: '14px 0', border: '0.5px solid #F0F0F0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: 22, fontWeight: 700, color: '#0D0D0D' }}>{totalItems}</span>
-            <span style={{ fontSize: 10, color: '#AAAAAA', textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 3 }}>Items</span>
+        <div className="grid grid-cols-3 gap-2.5 mb-6">
+          <div className="bg-surface rounded-card p-4 border border-border flex flex-col items-center justify-center">
+            <span className="text-[26px] font-bold text-dark leading-none bg-surface">{totalItems}</span>
+            <span className="text-label text-muted uppercase mt-1.5">Items</span>
           </div>
-          <div style={{ background: '#fff', borderRadius: 18, padding: '14px 0', border: '0.5px solid #F0F0F0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: 22, fontWeight: 700, color: '#0D0D0D' }}>{completed}</span>
-            <span style={{ fontSize: 10, color: '#AAAAAA', textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 3 }}>Done</span>
+          <div className="bg-surface rounded-card p-4 border border-border flex flex-col items-center justify-center">
+            <span className="text-[26px] font-bold text-dark leading-none bg-surface">{completed}</span>
+            <span className="text-label text-muted uppercase mt-1.5">Done</span>
           </div>
-          <div style={{ background: unresolvedConflicts > 0 ? '#E8470A' : '#fff', borderRadius: 18, padding: '14px 0', border: '0.5px solid #F0F0F0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <span style={{ fontSize: 22, fontWeight: 700, color: unresolvedConflicts > 0 ? '#fff' : '#0D0D0D' }}>{unresolvedConflicts}</span>
-            <span style={{ fontSize: 10, color: unresolvedConflicts > 0 ? 'rgba(255,255,255,0.7)' : '#AAAAAA', textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: 3 }}>Conflicts</span>
+          <div className={`rounded-card p-4 flex flex-col items-center justify-center ${unresolvedConflicts > 0 ? 'bg-orange border border-orange' : 'bg-surface border border-border'}`}>
+            <span className={`text-[26px] font-bold leading-none ${unresolvedConflicts > 0 ? 'text-white' : 'text-dark'}`}>{unresolvedConflicts}</span>
+            <span className={`text-label uppercase mt-1.5 ${unresolvedConflicts > 0 ? 'text-white/70' : 'text-muted'}`}>Conflicts</span>
           </div>
         </div>
 
         {/* Account info */}
-        <div style={{ padding: '0 20px' }}>
+        <div>
           <SectionLabel label="Account" />
-          <Card>
+          <div className="bg-surface rounded-card border border-border overflow-hidden mb-2">
             <Row label="Name" value={displayName} />
             <Row label="Email" value={email} last />
-          </Card>
+          </div>
 
           <SectionLabel label="Quick Links" />
-          <Card>
+          <div className="bg-surface rounded-card border border-border overflow-hidden mb-2">
             <Row label="Settings" onClick={() => nav('/settings')} />
             <Row label="Terms & Privacy" onClick={() => nav('/terms')} />
             <Row label="Import Calendar" onClick={() => nav('/import')} last />
-          </Card>
+          </div>
 
           <SectionLabel label="App" />
-          <Card>
+          <div className="bg-surface rounded-card border border-border overflow-hidden">
             <Row label="Version" value="1.0.0" />
             <Row label="Build" value="2026.04" last />
-          </Card>
+          </div>
         </div>
       </div>
     </div>

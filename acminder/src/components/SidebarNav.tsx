@@ -27,8 +27,8 @@ export default function SidebarNav({ className = '' }: { className?: string }) {
             <span className="text-white font-bold text-sm">A</span>
           </div>
           <div>
-            <h1 className="text-base font-display font-bold text-textPrimary">Acminder</h1>
-            <p className="text-[10px] text-textSecondary">Schedule Manager</p>
+            <h1 className="text-base font-display font-bold text-primary">Acminder</h1>
+            <p className="text-[10px] text-secondary">Schedule Manager</p>
           </div>
         </div>
       </div>
@@ -48,8 +48,8 @@ export default function SidebarNav({ className = '' }: { className?: string }) {
                     isAdd
                       ? 'bg-primary text-white hover:bg-primaryDark shadow-blue'
                       : active
-                      ? 'bg-primaryLight text-primary font-semibold'
-                      : 'text-textSecondary hover:bg-surface hover:text-textPrimary'
+                      ? 'bg-primaryLight primary font-semibold'
+                      : 'text-secondary hover:bg-surface hover:text-primary'
                   }`}
                 >
                   <Icon size={18} strokeWidth={active || isAdd ? 2.5 : 2} />
@@ -68,13 +68,13 @@ export default function SidebarNav({ className = '' }: { className?: string }) {
       <div className="px-5 py-4 border-t border-border">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-primaryLight flex items-center justify-center">
-            <span className="text-primary font-bold text-sm">
+            <span className="primary font-bold text-sm">
               {user.email?.charAt(0)?.toUpperCase() || 'U'}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-textPrimary truncate">{user.email?.split('@')[0]}</p>
-            <p className="text-[10px] text-textSecondary truncate">{user.email}</p>
+            <p className="text-xs font-semibold text-primary truncate">{user.email?.split('@')[0]}</p>
+            <p className="text-[10px] text-secondary truncate">{user.email}</p>
           </div>
         </div>
       </div>

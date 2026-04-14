@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Trash2, Pencil, Calendar, Clock, MapPin, Briefcase, BookOpen, FileText, RefreshCw } from 'lucide-react';
+import { Trash2, Pencil, Calendar, Clock, MapPin, Briefcase, BookOpen, FileText } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 function formatTime12(timeStr: string | undefined) {
@@ -20,16 +20,8 @@ function formatTime12(timeStr: string | undefined) {
 function formatDateLabel(dateStr: string | undefined) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
-  // Standardized to 'short' month initials
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
-
-const TYPE_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-  shift: { label: 'Work', color: 'text-primary', bg: 'bg-primary/10', icon: Briefcase },
-  class: { label: 'College', color: 'text-blue-600', bg: 'bg-blue-50', icon: BookOpen },
-  assignment: { label: 'Task', color: 'text-warning', bg: 'bg-warning/10', icon: FileText },
-  routine: { label: 'Habit', color: 'text-indigo-600', bg: 'bg-indigo-50', icon: Clock },
-};
 
 export default function ItemDetail() {
   const { id } = useParams();
@@ -66,14 +58,11 @@ export default function ItemDetail() {
   }, [item]);
 
   if (!id) return null;
-  if (!item) return <div className="p-10 text-center text-sm text-textSecondary animate-pulse">Loading item details…</div>;
+  if (!item) return <div className="p-10 text-center text-sm text-muted animate-pulse">Loading item details…</div>;
 
   const handleBack = () => {
-    if (isEditing) {
-      setIsEditing(false);
-    } else {
-      navigate(-1);
-    }
+    if (isEditing) setIsEditing(false);
+    else navigate(-1);
   };
 
   const onSave = async () => {
@@ -117,236 +106,172 @@ export default function ItemDetail() {
     }
   };
 
-  const cfg = TYPE_CONFIG[item.type] || TYPE_CONFIG.shift;
   const isAssignment = item.type === 'assignment';
-  const Icon = cfg.icon;
+
+  const typeConfig: Record<string, any> = {
+    shift: { label: 'Work', bg: 'bg-dark/5', color: 'text-dark', Icon: Briefcase },
+    class: { label: 'College', bg: 'bg-dark/5', color: 'text-dark', Icon: BookOpen },
+    assignment: { label: 'Task', bg: 'bg-surface', border: 'border border-dark', color: 'text-dark', Icon: FileText },
+    routine: { label: 'Habit', bg: 'bg-dark/5', color: 'text-dark', Icon: Clock },
+  };
+  const cfg = typeConfig[item.type] || typeConfig.shift;
+  const headerTag = cfg.border ? `${cfg.bg} ${cfg.border} ${cfg.color}` : `${cfg.bg} ${cfg.color}`;
+
+  const renderFormInput = (label: string, field: string, type = 'text', placeholder?: string) => (
+    <div className="mb-4 w-full">
+      <label className="block text-caption font-semibold text-dark mb-1">{label}</label>
+      <input
+        type={type}
+        placeholder={placeholder}
+        value={draft[field] || ''}
+        onChange={(e) => setDraft({...draft, [field]: e.target.value})}
+        className={`w-full px-4 py-3 rounded-input border bg-surface text-body text-dark font-body placeholder:text-muted focus:outline-none focus:ring-0 transition-colors ${
+          errors[field] ? 'border-orange focus:border-orange' : 'border-border focus:border-dark'
+        }`}
+      />
+      {errors[field] && <p className="text-caption text-orange mt-1">{errors[field]}</p>}
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-background flex flex-col animate-fadeIn">
-      {/* ───── Premium Header ───── */}
-      <header className="h-16 bg-white border-b border-gray-100 flex items-center px-4 sticky top-0 z-30">
-        <div className="flex-1 flex items-center">
-          <button 
-            onClick={handleBack} 
-            className="-ml-2 w-11 h-11 rounded-full flex items-center justify-center hover:bg-black/5 active:scale-95 transition-all text-textPrimary" 
-            aria-label={isEditing ? "Cancel editing" : "Go back"}
-          >
-            <ChevronLeft size={24} />
-          </button>
-        </div>
-        <h1 className="flex-[2] text-center font-display font-bold text-base text-textPrimary truncate">
-          {isEditing ? 'Edit Item' : 'Item Details'}
-        </h1>
-        <div className="flex-1 flex justify-end">
-          {!isEditing && (
-            <button 
-              onClick={onDelete} 
-              className="w-11 h-11 rounded-full flex items-center justify-center text-danger hover:bg-red-50 transition-colors"
-              aria-label="Delete item"
-            >
-              <Trash2 size={20} />
-            </button>
-          )}
-        </div>
-      </header>
+    <div className="min-h-screen bg-dark/40 backdrop-blur-sm flex flex-col justify-end animate-fadeIn">
+      {/* Background click to close */}
+      <div 
+        className="flex-1 w-full"
+        onClick={handleBack} 
+        style={{ cursor: 'pointer' }}
+      />
 
-      <main className="flex-1 p-4 lg:p-10 max-w-2xl mx-auto w-full space-y-6">
-        {/* ───── Read Mode ───── */}
+      {/* Bottom Sheet Modal */}
+      <div className="bg-surface rounded-t-[24px] w-full max-w-[480px] mx-auto px-5 pt-3 pb-8 max-h-[90vh] overflow-y-auto no-scrollbar relative flex flex-col">
+        
+        {/* Drag handle */}
+        <div className="w-12 h-1.5 bg-border rounded-full mx-auto flex-shrink-0 mb-5" />
+
+        <div className="flex justify-between items-center mb-6">
+           <h1 className="text-h3 text-dark font-display">{isEditing ? 'Edit Item' : 'Item Details'}</h1>
+           {!isEditing && (
+             <button onClick={onDelete} className="w-9 h-9 rounded-full bg-peach text-orange flex items-center justify-center hover:bg-orange/20 transition-colors shadow-none cursor-pointer">
+               <Trash2 size={16} />
+             </button>
+           )}
+        </div>
+
         {!isEditing ? (
-          <div className="space-y-6">
-            <div className="bg-white rounded-[2rem] shadow-card border border-gray-100 p-6 lg:p-8 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-2xl ${cfg.bg} flex items-center justify-center`}>
-                  <Icon size={20} className={cfg.color} />
+          <>
+            <div className={`px-2.5 py-0.5 rounded-badge text-[10px] font-bold uppercase tracking-wider w-fit mb-3 ${headerTag}`}>
+              {cfg.label}
+            </div>
+
+            <h2 className="text-h2 font-display text-dark mb-4">{item.title}</h2>
+
+            <div className="flex flex-col gap-3 mb-6">
+              <div className="flex items-center gap-3 text-body font-medium text-muted">
+                <Calendar size={18} className="text-dark" />
+                {formatDateLabel(isAssignment ? (item as any).due_date : item.date)}
+              </div>
+              <div className="flex items-center gap-3 text-body font-medium text-muted">
+                <Clock size={18} className="text-dark" />
+                {isAssignment 
+                  ? `Due ${formatTime12((item as any).due_time || '23:59')}` 
+                  : `${formatTime12(item.start_time)} \u2013 ${formatTime12(item.end_time)}`}
+              </div>
+
+              {(item as any).location && (
+                <div className="flex items-center gap-3 text-body font-medium text-muted">
+                  <MapPin size={18} className="text-dark" />
+                  {(item as any).location}
                 </div>
-                <span className={`text-[10px] font-bold uppercase tracking-widest ${cfg.color}`}>{cfg.label}</span>
-              </div>
-
-              <div>
-                <h2 className="text-2xl lg:text-3xl font-display font-bold text-textPrimary leading-tight mb-2">
-                  {item.title}
-                </h2>
-                <div className="flex flex-wrap gap-4 mt-6">
-                  <div className="flex items-center gap-2 text-sm text-textSecondary bg-surface px-3 py-2 rounded-xl">
-                    <Calendar size={14} className="text-primary" />
-                    {formatDateLabel(isAssignment ? (item as any).due_date : item.date)}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-textSecondary bg-surface px-3 py-2 rounded-xl">
-                    <Clock size={14} className="text-primary" />
-                    {isAssignment 
-                      ? `Due ${formatTime12((item as any).due_time || '23:59')}` 
-                      : `${formatTime12(item.start_time)} \u2013 ${formatTime12(item.end_time)}`}
-                  </div>
+              )}
+              {(item as any).course && (
+                <div className="flex items-center gap-3 text-body font-medium text-muted">
+                  <BookOpen size={18} className="text-dark" />
+                  {(item as any).course}
                 </div>
-              </div>
+              )}
+              {(item as any).role && (
+                <div className="flex items-center gap-3 text-body font-medium text-muted">
+                  <Briefcase size={18} className="text-dark" />
+                  {(item as any).role}
+                </div>
+              )}
+            </div>
 
-              <div className="h-px bg-gray-50 my-6" />
-
-              <div className="space-y-4">
-                {(item as any).location && (
-                  <div className="flex items-start gap-3">
-                    <MapPin size={16} className="text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Location</p>
-                      <p className="text-sm text-textPrimary font-medium">{(item as any).location}</p>
-                    </div>
-                  </div>
-                )}
-                {(item as any).course && (
-                  <div className="flex items-start gap-3">
-                    <BookOpen size={16} className="text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Course</p>
-                      <p className="text-sm text-textPrimary font-medium">{(item as any).course}</p>
-                    </div>
-                  </div>
-                )}
-                {(item as any).role && (
-                  <div className="flex items-start gap-3">
-                    <Briefcase size={16} className="text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Role</p>
-                      <p className="text-sm text-textPrimary font-medium">{(item as any).role}</p>
-                    </div>
-                  </div>
-                )}
-                {((item as any).repeats_weekly) && (
-                  <div className="flex items-center gap-2 text-xs font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-full w-fit">
-                    <RefreshCw size={12} /> REPEATS WEEKLY
-                  </div>
-                )}
-              </div>
+            <div className="mt-2 text-center text-caption text-muted flex items-center justify-center gap-2">
+              <div className="w-1.5 h-1.5 bg-border rounded-full" />
+              {item.completed ? 'Completed' : 'To do'}
+              <div className="w-1.5 h-1.5 bg-border rounded-full" />
             </div>
 
             <button
-              onClick={() => setIsEditing(true)}
-              className="w-full bg-primary text-white py-4 rounded-2xl font-display font-bold flex items-center justify-center gap-2 shadow-blue active:scale-[0.98] transition hover:bg-primaryDark"
-            >
-              <Pencil size={18} /> Edit Item
-            </button>
-          </div>
+               onClick={() => setIsEditing(true)}
+               className="w-full bg-dark text-white py-3.5 rounded-btn text-body font-semibold mt-4 flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all outline-none"
+             >
+               <Pencil size={18} /> Edit Item
+             </button>
+          </>
         ) : (
-          /* ───── Edit Mode ───── */
-          <div className="space-y-6">
-            <div className="bg-white rounded-[2rem] shadow-card border border-gray-100 p-6 lg:p-8 space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Title</label>
-                <input
-                  value={draft.title || ''}
-                  onChange={(e) => setDraft({...draft, title: e.target.value})}
-                  className={`w-full px-4 py-3.5 rounded-2xl border bg-surface transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none ${errors.title ? 'border-danger' : 'border-border'}`}
-                  placeholder="Enter title"
-                />
-                {errors.title && <p className="text-[10px] text-danger font-bold uppercase ml-1">{errors.title}</p>}
+          /* EDIT MODE */
+          <>
+            {renderFormInput('TITLE', 'title')}
+
+            {!isAssignment ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  {renderFormInput('DATE', 'date', 'date')}
+                  <div />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {renderFormInput('START TIME', 'start_time', 'time')}
+                  {renderFormInput('END TIME', 'end_time', 'time')}
+                </div>
+              </>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                 {renderFormInput('DUE DATE', 'due_date', 'date')}
+                 {renderFormInput('DUE TIME', 'due_time', 'time')}
               </div>
+            )}
 
-              {!isAssignment ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Date</label>
-                    <input
-                      type="date"
-                      value={draft.date || ''}
-                      onChange={(e) => setDraft({...draft, date: e.target.value})}
-                      className="w-full px-4 py-3.5 rounded-2xl border border-border bg-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-5">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Start</label>
-                      <input
-                        type="time"
-                        value={draft.start_time || ''}
-                        onChange={(e) => setDraft({...draft, start_time: e.target.value})}
-                        className="w-full px-4 py-3.5 rounded-2xl border border-border bg-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">End</label>
-                      <input
-                        type="time"
-                        value={draft.end_time || ''}
-                        onChange={(e) => setDraft({...draft, end_time: e.target.value})}
-                        className={`w-full px-4 py-3.5 rounded-2xl border bg-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none ${errors.end_time ? 'border-danger' : 'border-border'}`}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Due Date</label>
-                    <input
-                      type="date"
-                      value={draft.due_date || ''}
-                      onChange={(e) => setDraft({...draft, due_date: e.target.value})}
-                      className={`w-full px-4 py-3.5 rounded-2xl border bg-surface transition-all focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none ${errors.due_date ? 'border-danger' : 'border-border'}`}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Due Time</label>
-                    <input
-                      type="time"
-                      value={draft.due_time || ''}
-                      onChange={(e) => setDraft({...draft, due_time: e.target.value})}
-                      className="w-full px-4 py-3.5 rounded-2xl border border-border bg-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Location</label>
-                  <input
-                    value={draft.location || ''}
-                    onChange={(e) => setDraft({...draft, location: e.target.value})}
-                    className="w-full px-4 py-3.5 rounded-2xl border border-border bg-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none"
-                    placeholder="Physical or virtual location"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">{(item.type === 'shift') ? 'Role' : (item.type === 'routine') ? 'Category' : 'Course'}</label>
-                  <input
-                    value={item.type === 'shift' ? (draft.role || '') : (draft.course || '')}
-                    onChange={(e) => setDraft({...draft, [item.type === 'shift' ? 'role' : 'course']: e.target.value})}
-                    className="w-full px-4 py-3.5 rounded-2xl border border-border bg-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none"
-                    placeholder="Additional context"
-                  />
-                </div>
-              </div>
-
-              {item.type === 'class' && (
-                <label className="flex items-center gap-3 p-4 rounded-2xl bg-surface border border-border cursor-pointer hover:bg-white transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={!!draft.repeats_weekly}
-                    onChange={(e) => setDraft({...draft, repeats_weekly: e.target.checked})}
-                    className="w-5 h-5 rounded-md text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm font-semibold text-textPrimary">Repeats every week</span>
-                </label>
-              )}
+            <div className="grid grid-cols-2 gap-3">
+               {renderFormInput('LOCATION', 'location')}
+               {renderFormInput(item.type === 'shift' ? 'ROLE' : item.type === 'routine' ? 'CATEGORY' : 'COURSE', item.type === 'shift' ? 'role' : 'course')}
             </div>
 
-            <div className="flex gap-3">
+            {item.type === 'class' && (
+               <label className="flex items-center gap-3 cursor-pointer py-2 mb-4">
+               <div className={`w-5 h-5 rounded-[4px] border flex items-center justify-center transition-all ${draft.repeats_weekly ? 'bg-dark border-dark' : 'border-border'}`}
+                 onClick={() => setDraft({...draft, repeats_weekly: !draft.repeats_weekly})}>
+                 {draft.repeats_weekly && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+               </div>
+               <input
+                 type="checkbox"
+                 checked={draft.repeats_weekly}
+                 onChange={(e) => setDraft({...draft, repeats_weekly: e.target.checked})}
+                 className="sr-only"
+               />
+               <span className="text-body text-dark font-medium">Repeats every week</span>
+             </label>
+            )}
+
+            <div className="flex gap-3 mt-4">
               <button
                 onClick={() => setIsEditing(false)}
-                className="flex-1 bg-white border border-border text-textPrimary py-4 rounded-2xl font-display font-bold hover:bg-surface transition"
+                className="flex-1 bg-surface border border-border text-dark py-3.5 rounded-btn font-semibold hover:bg-appbg transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={onSave}
                 disabled={saving}
-                className="flex-[2] bg-primary text-white py-4 rounded-2xl font-display font-bold shadow-blue disabled:opacity-60 active:scale-[0.98] transition hover:bg-primaryDark"
+                className="flex-1 bg-dark text-white py-3.5 rounded-btn font-semibold disabled:opacity-50 active:scale-95 transition-all"
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
-          </div>
+          </>
         )}
-      </main>
+      </div>
     </div>
   );
 }

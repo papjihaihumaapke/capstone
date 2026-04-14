@@ -31,47 +31,47 @@ export default function ForgotPassword() {
   };
 
   return (
-    <AuthLayout backPath="/login" title="Reset password" subtitle="We'll send a link to your email">
+    <AuthLayout backPath="/login" title="Reset password" subtitle="Link sent to your email">
       {sent ? (
-        <div className="flex flex-col gap-5 items-center text-center py-4">
-          <div className="w-16 h-16 rounded-2xl bg-primaryLight flex items-center justify-center">
-            <MailCheck size={32} className="text-primary" />
+        <div className="flex flex-col gap-6 items-center text-center py-6">
+          <div className="w-16 h-16 rounded-badge bg-appbg border border-border flex items-center justify-center">
+            <MailCheck size={32} className="text-dark" />
           </div>
           <div>
-            <h3 className="font-display font-bold text-textPrimary text-lg mb-1">Check your inbox</h3>
-            <p className="text-sm text-textSecondary">A password reset link has been sent to <span className="font-semibold text-textPrimary">{email}</span>.</p>
+            <h3 className="text-h3 font-display text-dark mb-2">Check your inbox</h3>
+            <p className="text-caption text-secondary">A reset link has been sent to <span className="font-bold text-dark">{email}</span>.</p>
           </div>
           <button
             onClick={() => navigate('/login')}
-            className="w-full bg-primary text-white py-3.5 rounded-2xl font-display font-semibold active:scale-[0.98] transition shadow-blue hover:bg-primaryDark"
+            className="w-full bg-dark text-white py-4 rounded-btn font-display font-bold active:scale-[0.98] transition shadow-none uppercase tracking-widest"
           >
             Back to Login
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold text-textPrimary">Email address</label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <label className="text-label font-bold text-muted uppercase tracking-wider">Email address</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              className="w-full border border-border rounded-xl px-4 py-3 text-sm text-textPrimary bg-surface focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-textSecondary/50"
+              className="w-full border border-border rounded-btn px-4 py-3.5 text-body text-dark bg-surface outline-none transition-all placeholder:text-muted/40"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-white py-3.5 rounded-2xl font-display font-semibold disabled:opacity-60 active:scale-[0.98] transition shadow-blue hover:bg-primaryDark mt-2"
+            className="w-full bg-dark text-white py-4 rounded-btn font-display font-bold disabled:opacity-30 active:scale-[0.98] transition shadow-none mt-2 uppercase tracking-widest"
           >
-            {loading ? 'Sending…' : 'Send Reset Link'}
+            {loading ? 'Sending...' : 'Send Reset Link'}
           </button>
 
           {error && (
-            <div className="p-3 bg-red-50 text-danger text-xs font-medium rounded-xl text-center border border-red-100">
+            <div className="p-4 bg-peach text-orange text-caption font-bold rounded-btn text-center border border-peachborder">
               {error}
             </div>
           )}
