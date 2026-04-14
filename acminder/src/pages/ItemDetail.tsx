@@ -84,9 +84,17 @@ export default function ItemDetail() {
     if (isAssignment && !draft.due_date) errs.due_date = 'Due date required';
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
+    // Only send columns that exist in the schedule_items table.
+    // 'category' is not a DB column — strip it to avoid schema errors.
+    const SAFE_KEYS = ['title', 'date', 'start_time', 'end_time', 'location',
+                       'role', 'course', 'due_date', 'due_time', 'repeats_weekly', 'completed'];
+    const payload = Object.fromEntries(
+      Object.entries(draft).filter(([k]) => SAFE_KEYS.includes(k))
+    );
+
     setSaving(true);
     try {
-      await updateItem!(id, draft);
+      await updateItem!(id, payload);
       showToast?.('Changes saved');
       setIsEditing(false);
     } catch (e: any) {
