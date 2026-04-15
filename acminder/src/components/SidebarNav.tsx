@@ -18,7 +18,8 @@ export default function SidebarNav({ className = '' }: { className?: string }) {
 
   if (!user) return null;
 
-  const initials = (user.email?.split('@')[0] || 'U').slice(0, 2).toUpperCase();
+  const displayName = user.name || (user.email?.split('@')[0] || 'User');
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <aside className={`fixed left-0 top-0 h-full w-[220px] z-40 bg-surface flex flex-col ${className}`}
@@ -77,7 +78,7 @@ export default function SidebarNav({ className = '' }: { className?: string }) {
             <span className="text-dark font-semibold text-[11px]">{initials}</span>
           </div>
           <div className="min-w-0">
-            <p className="text-[12px] font-medium text-dark truncate">{user.email?.split('@')[0]}</p>
+            <p className="text-[12px] font-medium text-dark truncate">{displayName}</p>
             <p className="text-[10px] text-muted truncate">{user.email}</p>
           </div>
         </div>

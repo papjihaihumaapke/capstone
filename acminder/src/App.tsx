@@ -34,7 +34,6 @@ export default function App() {
 
         {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/import" element={<ImportSchedule />} />
           <Route element={<AppLayout />}>
             <Route path="/home" element={<Home />} />
             <Route path="/calendar" element={<CalendarView />} />
@@ -45,6 +44,7 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/import" element={<ImportSchedule />} />
           </Route>
         </Route>
 

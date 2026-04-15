@@ -42,6 +42,7 @@ interface AppContextType {
   logout: () => void;
   isNewUser: boolean;
   clearNewUser: () => void;
+  updateUserName: (name: string) => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -146,6 +147,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const showToast = (message: string) => setToast({ message, visible: true });
   const hideToast = () => setToast(null);
 
+  const updateUserName = async (name: string) => {
+    const { error } = await supabase.auth.updateUser({ data: { display_name: name } });
+    if (error) throw error;
+    setUser((prev) => prev ? { ...prev, name } : null);
+  };
+
   const logout = () => {
     setUser(null);
     setItems([]);
@@ -175,7 +182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // has had a chance to restore the session from the OAuth redirect.
     supabase.auth.getSession().then(({ data: { session } }: any) => {
       const u = session?.user;
-      setUser(u ? { id: u.id, email: u.email || '', name: '' } : null);
+      setUser(u ? { id: u.id, email: u.email || '', name: u.user_metadata?.display_name || '' } : null);
       checkProfile(u);
     }).catch(() => {
       setUser(null);
@@ -187,7 +194,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const u = session?.user;
       // Persist provider_token immediately — it's only available right after OAuth
       if (session?.provider_token) saveProviderToken(session.provider_token);
-      setUser(u ? { id: u.id, email: u.email || '', name: '' } : null);
+      setUser(u ? { id: u.id, email: u.email || '', name: u.user_metadata?.display_name || '' } : null);
       checkProfile(u);
     });
 
@@ -217,6 +224,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         importedSources, setImportedSources,
         logout,
         isNewUser, clearNewUser,
+        updateUserName,
       }}
     >
       {children}
