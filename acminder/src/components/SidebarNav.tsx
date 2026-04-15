@@ -1,13 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, CalendarDays, Plus, Settings, Upload, User } from 'lucide-react';
+import { Home, CalendarDays, Plus, Settings, Upload, User, TrendingUp } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 const TABS = [
-  { name: 'Home',     path: '/home',     icon: Home },
-  { name: 'Calendar', path: '/calendar', icon: CalendarDays },
-  { name: 'Import',   path: '/import',   icon: Upload },
-  { name: 'Profile',  path: '/profile',  icon: User },
-  { name: 'Settings', path: '/settings', icon: Settings },
+  { name: 'Home',      path: '/home',      icon: Home },
+  { name: 'Calendar',  path: '/calendar',  icon: CalendarDays },
+  { name: 'Analytics', path: '/analytics', icon: TrendingUp },
+  { name: 'Import',    path: '/import',    icon: Upload },
+  { name: 'Profile',   path: '/profile',   icon: User },
+  { name: 'Settings',  path: '/settings',  icon: Settings },
 ];
 
 export default function SidebarNav({ className = '' }: { className?: string }) {

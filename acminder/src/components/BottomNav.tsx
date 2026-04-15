@@ -66,16 +66,16 @@ export default function BottomNav({ className = '' }: { className?: string }) {
         </svg>
       </button>
 
-      {/* Profile */}
-      <NavItem 
-        path="/profile" 
-        label="Profile" 
+      {/* Analytics */}
+      <NavItem
+        path="/analytics"
+        label="Analytics"
         icon={
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="8" r="4"/>
-            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+            <polyline points="16 7 22 7 22 13"/>
           </svg>
-        } 
+        }
       />
 
       {/* Settings */}

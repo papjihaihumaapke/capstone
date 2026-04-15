@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, FileUp, AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../hooks/useAuth';
 import { useState, useRef, useEffect } from 'react';
 import { parseIcs, toDateString, toTimeString } from '../lib/ics';
 import { addItems } from '../lib/supabase';
@@ -31,6 +32,7 @@ function saveImportSessions(userId: string, sessions: ImportSession[]) {
 export default function ImportSchedule() {
   const navigate = useNavigate();
   const { user, showToast, fetchItems, deleteItem } = useAppContext();
+  const { signInWithGoogle } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importedCount, setImportedCount] = useState<number | null>(null);
@@ -177,25 +179,41 @@ export default function ImportSchedule() {
 
         {tab === 'import' && (
           <div className="space-y-4">
-            {/* Guide tile */}
+            {/* Google Calendar connect tile */}
             <div className="bento-tile">
-              <p className="text-[11px] font-semibold text-muted uppercase tracking-widest mb-3">How to export</p>
-              <div className="space-y-2.5">
-                {[
-                  { label: 'Google Calendar', desc: 'Settings → Export', icon: 'G' },
-                  { label: 'Apple Calendar',  desc: 'File → Export → Export…', icon: 'A' },
-                  { label: 'Outlook',         desc: 'File → Open & Export → .ics', icon: 'O' },
-                ].map(g => (
-                  <div key={g.label} className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-[6px] bg-appbg border border-border text-[11px] font-semibold text-dark flex items-center justify-center">
-                      {g.icon}
-                    </div>
-                    <span className="text-[13px] text-secondary">
-                      <strong className="text-dark font-medium">{g.label}:</strong> {g.desc}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <p className="text-[11px] font-semibold text-muted uppercase tracking-widest mb-3">Sync Google Calendar</p>
+              <p className="text-[13px] text-secondary mb-3 leading-relaxed">
+                Connect your Google account to automatically sync your Google Calendar events into Acminder.
+              </p>
+              <button
+                onClick={() => signInWithGoogle()}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[10px] text-[13px] font-medium transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ background: '#1A1A1A', color: '#FFFFFF' }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#fff"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#fff" opacity=".7"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#fff" opacity=".5"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#fff" opacity=".6"/>
+                </svg>
+                Connect Google Calendar
+              </button>
+            </div>
+
+            {/* How to export .ics tile */}
+            <div className="bento-tile">
+              <p className="text-[11px] font-semibold text-muted uppercase tracking-widest mb-3">How to export a .ics file</p>
+              <ol className="space-y-2 list-none">
+                <li className="text-[13px] text-secondary leading-relaxed">
+                  <strong className="text-dark font-medium">Google Calendar:</strong> Open Google Calendar on desktop → Settings (gear icon) → Import &amp; export → Export
+                </li>
+                <li className="text-[13px] text-secondary leading-relaxed" style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '8px' }}>
+                  <strong className="text-dark font-medium">Apple Calendar:</strong> Open Calendar on Mac → File menu → Export → Export…
+                </li>
+                <li className="text-[13px] text-secondary leading-relaxed" style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '8px' }}>
+                  <strong className="text-dark font-medium">Outlook:</strong> File → Open &amp; Export → Import/Export → Export to a file → iCalendar (.ics)
+                </li>
+              </ol>
             </div>
 
             {/* Drop zone */}

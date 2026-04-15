@@ -1,6 +1,7 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
+import { usePreferences } from '../hooks/usePreferences';
 import { ArrowLeft, Sparkles, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { generateConflictWithGemini, type GeminiConflictResult } from '../lib/gemini';
 import { itemOccursOnDate, timeToMinutes } from '../lib/conflictEngine';
@@ -47,6 +48,7 @@ export default function ConflictDetail() {
   const navigate = useNavigate();
   const ctx = useContext(AppContext);
   const { conflicts, resolveConflict, showToast, items } = ctx || {};
+  const { prefs } = usePreferences();
 
   const conflict = conflicts?.find((c) => c.id === id);
   const itemA = conflict?.item_a ?? null;
@@ -63,16 +65,15 @@ export default function ConflictDetail() {
   const [aiSuggestions, setAiSuggestions] = useState<GeminiConflictResult['suggestions']>([]);
 
   useEffect(() => {
-    if (id) {
-      const cached = loadCachedAi(id);
-      if (cached) {
-        setAiSummary(cached.summary);
-        setAiSuggestions(cached.suggestions);
-      } else {
-        fetchAi();
-      }
+    if (!id || !prefs.smartSuggestions) return;
+    const cached = loadCachedAi(id);
+    if (cached) {
+      setAiSummary(cached.summary);
+      setAiSuggestions(cached.suggestions);
+    } else {
+      fetchAi();
     }
-  }, [id]);
+  }, [id, prefs.smartSuggestions]);
 
   const otherItemsSameDateInfo = useMemo(() => {
     if (!items || !itemA || !itemB || !conflictDate) {
@@ -188,60 +189,67 @@ export default function ConflictDetail() {
           )}
         </div>
 
-        {/* AI Insight Section */}
-        <div className="mt-8 mb-4 flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5">
-            <Sparkles size={16} className="text-dark" />
-            <h2 className="text-label font-bold uppercase tracking-widest text-muted">Smart Advice</h2>
-          </div>
-          <button 
-            onClick={() => fetchAi()} 
-            disabled={aiLoading}
-            className="w-8 h-8 rounded-full border border-border flex items-center justify-center cursor-pointer hover:bg-surface active:scale-95 transition-all text-dark bg-transparent"
-          >
-            <RefreshCw size={14} className={aiLoading ? 'animate-spin' : ''} />
-          </button>
-        </div>
+        {/* AI Insight Section — only shown when Smart Suggestions is enabled in Settings */}
+        {prefs.smartSuggestions && (
+          <>
+            <div className="mt-8 mb-4 flex items-center justify-between px-1">
+              <div className="flex items-center gap-1.5">
+                <Sparkles size={16} className="text-dark" />
+                <h2 className="text-label font-bold uppercase tracking-widest text-muted">Smart Advice</h2>
+              </div>
+              <button
+                onClick={() => fetchAi()}
+                disabled={aiLoading}
+                className="w-8 h-8 rounded-full border border-border flex items-center justify-center cursor-pointer hover:bg-surface active:scale-95 transition-all text-dark bg-transparent"
+              >
+                <RefreshCw size={14} className={aiLoading ? 'animate-spin' : ''} />
+              </button>
+            </div>
 
-        {!aiLoading ? (
-          <div className="flex flex-col gap-3">
-            {aiSummary && (
-              <div className="bg-surface rounded-card border border-border p-4">
-                <p className="text-body font-medium text-dark leading-relaxed italic">"{aiSummary}"</p>
+            {!aiLoading ? (
+              <div className="flex flex-col gap-3">
+                {aiSummary && (
+                  <div className="bg-surface rounded-card border border-border p-4">
+                    <p className="text-body font-medium text-dark leading-relaxed italic">"{aiSummary}"</p>
+                  </div>
+                )}
+
+                {aiSuggestions.map((s, idx) => (
+                  <div key={idx} className="bg-surface rounded-card border border-border p-4 flex flex-col gap-3">
+                    <div className="flex gap-3">
+                      <div className="w-8 h-8 rounded-badge bg-appbg flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={16} className="text-dark" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-bodybold text-dark">
+                          {s.proposed_start_time
+                            ? `Move ${s.move_item_type} to ${formatTimeOnly(s.proposed_start_time)}`
+                            : `Adjust ${s.move_item_type || 'Schedule'}`}
+                        </div>
+                        <p className="text-caption text-muted mt-1 leading-relaxed">{s.reason}</p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted leading-relaxed px-1">
+                      This is a suggestion only — you'll need to update your schedule manually if you want to follow it.
+                    </p>
+                    <button
+                      onClick={handleResolve}
+                      className="w-full bg-dark text-white py-2.5 rounded-btn text-caption font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+                    >
+                      Mark as Resolved
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-surface rounded-card border border-border p-10 flex flex-col items-center justify-center gap-3">
+                <div className="w-12 h-12 bg-appbg rounded-[18px] flex items-center justify-center animate-bounce text-dark">
+                  <Sparkles size={24} />
+                </div>
+                <p className="text-label font-bold text-muted uppercase tracking-widest">Consulting AI Advisor...</p>
               </div>
             )}
-            
-            {aiSuggestions.map((s, idx) => (
-              <div key={idx} className="bg-surface rounded-card border border-border p-4 flex flex-col">
-                <div className="flex gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-badge bg-border/40 flex items-center justify-center shrink-0">
-                    <CheckCircle2 size={16} className="text-dark" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-bodybold text-dark">
-                      {s.proposed_start_time 
-                        ? `Move ${s.move_item_type} to ${formatTimeOnly(s.proposed_start_time)}` 
-                        : `Adjust ${s.move_item_type || 'Schedule'}`}
-                    </div>
-                    <p className="text-caption text-muted mt-1 leading-relaxed">{s.reason}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleResolve}
-                  className="w-full bg-dark text-white py-2.5 rounded-btn text-caption font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
-                >
-                  Apply Suggestion
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-surface rounded-card border border-border p-10 flex flex-col items-center justify-center gap-3">
-             <div className="w-12 h-12 bg-appbg rounded-[18px] flex items-center justify-center animate-bounce text-dark">
-                <Sparkles size={24} />
-             </div>
-             <p className="text-label font-bold text-muted uppercase tracking-widest">Consulting AI Advisor...</p>
-          </div>
+          </>
         )}
 
         {/* Global CTA */}

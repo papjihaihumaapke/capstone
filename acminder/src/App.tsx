@@ -17,6 +17,7 @@ import ConflictDetail from './pages/ConflictDetail';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import Terms from './pages/Terms';
+import Analytics from './pages/Analytics';
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/analytics" element={<Analytics />} />
           </Route>
         </Route>
 

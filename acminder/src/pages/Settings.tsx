@@ -111,16 +111,18 @@ export default function Settings() {
               borderBottom={false}
               right={
                 <div className="flex items-center gap-2">
-                  <span className={`text-caption font-bold px-2 py-0.5 rounded-badge ${
-                    googleConnected 
-                      ? 'text-dark bg-dark/5' 
-                      : 'text-muted bg-border/40'
-                  }`}>
+                  <span
+                    className="text-caption font-semibold px-2.5 py-1 rounded-badge"
+                    style={googleConnected
+                      ? { background: '#E6F4ED', color: '#1A7A4A' }
+                      : { background: '#EBEBEB', color: '#4A4A4A' }
+                    }
+                  >
                     {googleConnected ? 'Connected' : 'Not Connected'}
                   </span>
-                  <button 
+                  <button
                     onClick={(e) => { e.stopPropagation(); signInWithGoogle(); }}
-                    className="text-caption text-muted underline hover:text-dark transition-colors"
+                    className="text-caption font-medium text-secondary hover:text-dark transition-colors underline"
                   >
                     {googleConnected ? 'Reconnect' : 'Connect'}
                   </button>
