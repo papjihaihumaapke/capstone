@@ -81,8 +81,8 @@ export default function Profile() {
   const unresolvedConflicts = conflicts.filter(c => !c.resolved).length;
 
   return (
-    <div className="min-h-[100dvh] bg-appbg animate-fadeIn pb-32">
-      <div className="max-w-[480px] mx-auto pt-10 px-5">
+    <div className="min-h-[100dvh] bg-appbg animate-fadeIn pb-24 lg:pb-10">
+      <div className="max-w-[640px] mx-auto pt-8 lg:pt-10 px-5 lg:px-8">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

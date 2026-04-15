@@ -123,40 +123,65 @@ export default function AddItem() {
   };
 
   return (
-    <div className="min-h-screen bg-dark/40 backdrop-blur-sm flex flex-col justify-end animate-fadeIn">
-      {/* Background click to close */}
-      <div 
-        className="flex-1 w-full"
-        onClick={() => navigate('/home')} 
-        style={{ cursor: 'pointer' }}
+    /* ── Overlay ── */
+    <div
+      className="fixed inset-0 z-50 flex flex-col lg:items-center lg:justify-center animate-fadeIn"
+      style={{ background: 'rgba(0,0,0,0.45)' }}
+    >
+      {/* Click outside to close */}
+      <div className="absolute inset-0" onClick={() => navigate(-1)} />
+
+      {/* ── Sheet / Modal ── */}
+      <div
+        className={[
+          'relative z-10 bg-surface w-full overflow-y-auto no-scrollbar',
+          /* mobile: bottom sheet */
+          'rounded-t-[24px] max-h-[92dvh] mt-auto',
+          /* desktop: centered card */
+          'lg:rounded-[20px] lg:max-w-[480px] lg:max-h-[85dvh] lg:mx-4 lg:mt-0',
+        ].join(' ')}
+        style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}
       >
-        <div className="absolute top-12 left-6 w-9 h-9 bg-surface/10 rounded-btn flex items-center justify-center hover:bg-surface/20 active:scale-95 transition-all">
-          <ArrowLeft size={20} className="text-white" />
-        </div>
-      </div>
-
-      {/* Bottom Sheet Form */}
-      <div className="bg-surface rounded-t-[24px] w-full max-w-[480px] mx-auto px-5 pt-3 pb-8">
-        
-        {/* Drag handle */}
-        <div className="w-12 h-1.5 bg-border rounded-full mx-auto mb-5" />
-
-        <h1 className="text-h3 text-dark font-display mb-4">Add to Schedule</h1>
-
-        <div className="mb-5">
-           <TabSwitcher tabs={tabs} activeTab={currentTabDisplay} onTabChange={handleTabChange} />
+        {/* Drag handle (mobile only) */}
+        <div className="lg:hidden flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(0,0,0,0.15)' }} />
         </div>
 
-        {renderForm()}
+        <div className="px-5 pt-4 pb-8">
+          {/* Header row */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="hidden lg:flex w-8 h-8 rounded-[8px] items-center justify-center hover:bg-appbg transition-colors"
+              >
+                <ArrowLeft size={16} className="text-dark" />
+              </button>
+              <h1 className="text-[17px] font-semibold text-dark">Add to Schedule</h1>
+            </div>
+            <button
+              onClick={() => navigate(-1)}
+              className="w-8 h-8 rounded-[8px] flex items-center justify-center hover:bg-appbg transition-colors"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B6B6B" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
 
-        <div className="mt-8">
-          <button
-            onClick={submit}
-            disabled={loading}
-            className="w-full bg-dark text-white py-3.5 rounded-btn text-body font-semibold hover:opacity-90 active:scale-95 transition-all shadow-none disabled:opacity-50"
-          >
-            {loading ? 'Saving…' : `Save ${currentTabDisplay}`}
-          </button>
+          <div className="mb-5">
+            <TabSwitcher tabs={tabs} activeTab={currentTabDisplay} onTabChange={handleTabChange} />
+          </div>
+
+          {renderForm()}
+
+          <div className="mt-6">
+            <button
+              onClick={submit}
+              disabled={loading}
+              className="w-full bg-dark text-white py-3.5 rounded-[12px] text-[14px] font-medium hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40"
+            >
+              {loading ? 'Saving…' : `Save ${currentTabDisplay}`}
+            </button>
+          </div>
         </div>
       </div>
     </div>

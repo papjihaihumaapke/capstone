@@ -77,8 +77,8 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-appbg animate-fadeIn pb-32">
-      <div className="max-w-[480px] mx-auto px-5 pt-12 pb-6">
+    <div className="min-h-[100dvh] bg-appbg animate-fadeIn pb-24 lg:pb-10">
+      <div className="max-w-[640px] mx-auto px-5 lg:px-8 pt-8 lg:pt-10 pb-6">
         <h1 className="text-h1 font-display font-bold mb-8 text-dark">Settings</h1>
 
         {/* ACCOUNT */}
